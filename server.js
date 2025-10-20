@@ -264,3 +264,12 @@ app.listen(PORT, () => {
   console.log(`🚀 Atulya Panel server running on http://localhost:${PORT}`);
   console.log(`📁 Upload directory: ${uploadsDir}`);
 });
+
+// Routes (modular)
+const oneclickRoutes = require('./server/routes/oneclick');
+const sslRoutes = require('./server/routes/ssl');
+const wordpressRoutes = require('./server/routes/wordpress');
+
+app.use('/api/oneclick', oneclickRoutes);
+app.use('/api/ssl', sslRoutes);
+app.use('/api/wordpress', wordpressRoutes);

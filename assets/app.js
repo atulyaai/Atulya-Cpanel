@@ -468,7 +468,10 @@ function renderDomains() {
 		<div class="panel">
 			<div class="panel__header">
 				<div class="panel__title">Domains</div>
-				<button class="btn" id="btn-add-domain">Add domain</button>
+				<div class="actions">
+					<button class="btn" id="btn-add-domain">Add domain</button>
+					<button class="btn btn--ghost" id="btn-install-wp">Install WordPress</button>
+				</div>
 			</div>
 			<table class="table">
 				<thead><tr><th>Domain</th><th>Type</th><th>SSL</th><th>Actions</th></tr></thead>
@@ -516,6 +519,42 @@ function renderDomains() {
 				return true;
 			} catch (error) {
 				showToast('Failed to add domain');
+				return false;
+			}
+		});
+	});
+
+	document.getElementById('btn-install-wp').addEventListener('click', () => {
+		showModal('Install WordPress', `
+			<div class="form-group"><label class="form-label">Domain</label><input class="form-input" id="wp-domain" placeholder="example.com" /></div>
+			<div class="form-group"><label class="form-label">Document Root</label><input class="form-input" id="wp-root" value="public_html" /></div>
+			<div class="form-group"><label class="form-label">DB Name</label><input class="form-input" id="wp-dbname" placeholder="wp_db" /></div>
+			<div class="form-group"><label class="form-label">DB User</label><input class="form-input" id="wp-dbuser" placeholder="wp_user" /></div>
+			<div class="form-group"><label class="form-label">DB Pass</label><input class="form-input" id="wp-dbpass" type="password" placeholder="••••••" /></div>
+			<div class="form-group"><label class="form-label">Site Title</label><input class="form-input" id="wp-title" placeholder="My Site" /></div>
+			<div class="form-group"><label class="form-label">Admin Email</label><input class="form-input" id="wp-email" type="email" placeholder="admin@example.com" /></div>
+		`, async () => {
+			const domain = document.getElementById('wp-domain').value;
+			if (!domain) return false;
+			try {
+				const resp = await fetch(`${API_BASE}/oneclick/wordpress`, {
+					method: 'POST', headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						domain,
+						documentRoot: document.getElementById('wp-root').value || 'public_html',
+						dbName: document.getElementById('wp-dbname').value,
+						dbUser: document.getElementById('wp-dbuser').value,
+						dbPass: document.getElementById('wp-dbpass').value,
+						title: document.getElementById('wp-title').value,
+						adminEmail: document.getElementById('wp-email').value
+					})
+				});
+				const result = await resp.json();
+				if (!resp.ok) throw new Error(result.error || 'Install failed');
+				showToast('WordPress installation initialized');
+				return true;
+			} catch(e) {
+				showToast('Failed to install WordPress');
 				return false;
 			}
 		});
