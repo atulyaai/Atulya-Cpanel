@@ -223,3 +223,20 @@ export function validateIPAddress(ip: string): boolean {
   const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
   return ipv4Regex.test(ip) || ipv6Regex.test(ip);
 }
+
+/**
+ * Main security middleware that combines all security features
+ */
+export async function securityMiddleware(fastify: FastifyInstance) {
+  // Apply security headers
+  await fastify.register(securityHeaders);
+  
+  // Apply rate limiting
+  await fastify.register(async function (fastify) {
+    fastify.addHook('preHandler', createRateLimit({
+      max: 100, // requests per window
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      keyGenerator: (request) => request.ip || 'unknown'
+    }));
+  });
+}

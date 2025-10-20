@@ -7,7 +7,7 @@
         </div>
         <div>
           <h1 class="text-lg font-semibold text-white">Atulya Panel</h1>
-          <p class="text-xs text-gray-400">v2.0.0</p>
+          <p class="text-xs text-gray-400">v2.1.0</p>
         </div>
       </div>
     </div>

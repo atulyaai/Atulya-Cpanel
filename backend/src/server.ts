@@ -9,6 +9,7 @@ import { env } from './config/env.js';
 import { errorHandler } from './utils/errorHandler.js';
 import { auditLogger } from './middleware/auditLogger.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
+import { securityMiddleware } from './middleware/security.js';
 import { authRoutes } from './routes/auth.js';
 import { siteRoutes } from './routes/sites.js';
 import { databaseRoutes } from './routes/databases.js';
@@ -80,8 +81,8 @@ async function registerMiddleware() {
   // Error handler
   fastify.setErrorHandler(errorHandler);
 
-  // Rate limiting
-  fastify.register(rateLimiter);
+  // Security middleware (includes rate limiting and security headers)
+  fastify.register(securityMiddleware);
 
   // Audit logging
   fastify.register(auditLogger);
@@ -118,14 +119,14 @@ async function setupInfrastructure() {
 // Graceful shutdown
 async function gracefulShutdown() {
   fastify.log.info('Shutting down gracefully...');
-  
+
   try {
     // Cleanup WebSocket service
     const webSocketService = (fastify as any).websocketService;
     if (webSocketService) {
       webSocketService.cleanup();
     }
-    
+
     await fastify.close();
     await prisma.$disconnect();
     fastify.log.info('Shutdown complete');
