@@ -1,0 +1,219 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+
+  // Relations
+  sites        Site[]
+  databases    Database[]
+  emailAccounts EmailAccount[]
+  cronJobs     CronJob[]
+  backups      Backup[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Site {
+  id          String   @id @default(cuid())
+  domain      String   @unique
+  documentRoot String  @default("public_html")
+  phpVersion  String   @default("8.2")
+  sslEnabled  Boolean  @default(false)
+  sslCert     String?
+  sslKey      String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  databases   Database[]
+  emailAccounts EmailAccount[]
+  cronJobs    CronJob[]
+  backups     Backup[]
+  domains     Domain[]
+
+  @@map("sites")
+}
+
+model Database {
+  id       String @id @default(cuid())
+  name     String
+  username String
+  password String
+  size     BigInt @default(0)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  siteId String?
+  site   Site?  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([name])
+  @@index([userId])
+  @@index([siteId])
+  @@map("databases")
+}
+
+model EmailAccount {
+  id       String @id @default(cuid())
+  email    String
+  password String
+  quota    BigInt @default(1073741824) // 1GB in bytes
+  used     BigInt @default(0)
+  forwardTo String?
+  catchAll Boolean @default(false)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  siteId String?
+  site   Site? @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([email])
+  @@index([userId])
+  @@index([siteId])
+  @@map("email_accounts")
+}
+
+model Domain {
+  id        String     @id @default(cuid())
+  name      String
+  type      DomainType @default(PRIMARY)
+  sslStatus String     @default("not_issued")
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  siteId String
+  site   Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([name])
+  @@map("domains")
+}
+
+model Backup {
+  id       String     @id @default(cuid())
+  type     BackupType @default(FULL)
+  size     BigInt     @default(0)
+  status   BackupStatus @default(PENDING)
+  location String?
+  createdAt DateTime   @default(now())
+  completedAt DateTime?
+
+  // Relations
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  siteId String
+  site   Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("backups")
+}
+
+model CronJob {
+  id        String @id @default(cuid())
+  schedule  String
+  command   String
+  isActive  Boolean @default(true)
+  lastRun   DateTime?
+  nextRun   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  siteId String
+  site   Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("cron_jobs")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  resource  String
+  resourceId String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("sessions")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  RESELLER
+  USER
+}
+
+enum DomainType {
+  PRIMARY
+  SUBDOMAIN
+  ADDON
+}
+
+enum BackupType {
+  FULL
+  INCREMENTAL
+  DATABASE
+}
+
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
