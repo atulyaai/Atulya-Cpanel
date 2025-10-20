@@ -566,7 +566,10 @@ function renderUsers() {
 		<div class="panel">
 			<div class="panel__header">
 				<div class="panel__title">Users</div>
-				<button class="btn" id="btn-invite-user">Invite</button>
+				<div class="actions">
+					<button class="btn" id="btn-invite-user">Invite</button>
+					<button class="btn btn--ghost" id="btn-quotas">Quotas</button>
+				</div>
 			</div>
 			<table class="table">
 				<thead><tr><th>User</th><th>Role</th><th>Last active</th><th>Actions</th></tr></thead>
@@ -623,7 +626,70 @@ function renderUsers() {
 			}
 		});
 	});
+
+	document.getElementById('btn-quotas').addEventListener('click', async () => {
+		try {
+			const response = await fetch(`${API_BASE}/quotas`);
+			const quotas = await response.json();
+			
+			const quotaList = quotas.map(q => `
+				<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--elev); border-radius: 8px; margin-bottom: 8px;">
+					<div>
+						<strong>${q.domain}</strong><br>
+						<small>Storage: ${q.size} / ${q.maxStorage}</small>
+					</div>
+					<button class="btn btn--sm btn--danger" onclick="removeQuota('${q.domain}')">Remove</button>
+				</div>
+			`).join('');
+			
+			showModal('Storage Quotas', `
+				<div class="form-group">
+					<label class="form-label">Add Quota</label>
+					<div style="display: grid; grid-template-columns: 1fr auto; gap: 10px;">
+						<input type="text" class="form-input" id="quota-domain" placeholder="domain.com" />
+						<button class="btn" onclick="addQuota()">Add</button>
+					</div>
+				</div>
+				<div style="margin-top: 16px;">
+					<h4>Current Quotas</h4>
+					<div id="quota-list">${quotaList}</div>
+				</div>
+			`, () => true);
+		} catch (error) {
+			showToast('Failed to load quotas');
+		}
+	});
 }
+
+window.addQuota = async () => {
+	const domain = document.getElementById('quota-domain').value;
+	if (!domain) return;
+	
+	try {
+		const response = await fetch(`${API_BASE}/quotas`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ domain, maxStorage: '1GB', maxDatabases: 5, maxDomains: 1 })
+		});
+		const result = await response.json();
+		showToast(result.message);
+		document.getElementById('quota-domain').value = '';
+	} catch (error) {
+		showToast('Failed to add quota');
+	}
+};
+
+window.removeQuota = async (domain) => {
+	try {
+		const response = await fetch(`${API_BASE}/quotas/${domain}`, {
+			method: 'DELETE'
+		});
+		const result = await response.json();
+		showToast(result.message);
+	} catch (error) {
+		showToast('Failed to remove quota');
+	}
+};
 
 function renderSecurity() {
 	mount(`
