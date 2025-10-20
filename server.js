@@ -270,8 +270,14 @@ const oneclickRoutes = require('./server/routes/oneclick');
 const sslRoutes = require('./server/routes/ssl');
 const wordpressRoutes = require('./server/routes/wordpress');
 const quotasRoutes = require('./server/routes/quotas');
+const backupsRoutes = require('./server/routes/backups');
+const cronRoutes = require('./server/routes/cron');
+const logsRoutes = require('./server/routes/logs');
 
 app.use('/api/oneclick', oneclickRoutes);
 app.use('/api/ssl', sslRoutes);
 app.use('/api/wordpress', wordpressRoutes);
 app.use('/api/quotas', quotasRoutes);
+app.use('/api/backups', backupsRoutes);
+app.use('/api/cron', cronRoutes);
+app.use('/api/logs', logsRoutes);

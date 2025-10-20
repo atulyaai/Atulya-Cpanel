@@ -33,6 +33,10 @@ function render(view) {
 			return renderSecurity();
 		case 'backups':
 			return renderBackups();
+		case 'cron':
+			return renderCron();
+		case 'logs':
+			return renderLogs();
 		case 'settings':
 			return renderSettings();
 		default:
@@ -1094,6 +1098,8 @@ const actions = [
 	{ id: 'go-users', label: 'Open Users', run: () => { setActive('users'); render('users'); } },
 	{ id: 'go-security', label: 'Open Security', run: () => { setActive('security'); render('security'); } },
 	{ id: 'go-backups', label: 'Open Backups', run: () => { setActive('backups'); render('backups'); } },
+	{ id: 'go-cron', label: 'Open Cron Jobs', run: () => { setActive('cron'); render('cron'); } },
+	{ id: 'go-logs', label: 'Open Logs', run: () => { setActive('logs'); render('logs'); } },
 	{ id: 'go-settings', label: 'Open Settings', run: () => { setActive('settings'); render('settings'); } },
 	{ id: 'toggle-theme', label: 'Toggle Theme', run: toggleTheme },
 ];
@@ -1262,6 +1268,374 @@ function showToast(text) {
 		el.style.transform = 'translateY(6px)';
 		setTimeout(() => el.remove(), 300);
 	}, 2200);
+}
+
+function renderBackups() {
+	mount(`
+		<div class="panel">
+			<div class="panel__header">
+				<div class="panel__title">Backups</div>
+				<div class="actions">
+					<button class="btn" id="btn-create-backup">Create backup</button>
+					<button class="btn btn--ghost" id="btn-schedule-backup">Schedule</button>
+				</div>
+			</div>
+			<table class="table">
+				<thead><tr><th>Name</th><th>Size</th><th>Type</th><th>Created</th><th>Actions</th></tr></thead>
+				<tbody id="backup-list">
+					<tr><td colspan="5" style="text-align: center; color: var(--muted);">Loading backups...</td></tr>
+				</tbody>
+			</table>
+		</div>
+	`);
+
+	loadBackups();
+
+	document.getElementById('btn-create-backup').addEventListener('click', () => {
+		showModal('Create Backup', `
+			<div class="form-group">
+				<label class="form-label">Domain</label>
+				<input type="text" class="form-input" id="backup-domain" placeholder="example.com" />
+			</div>
+			<div class="form-group">
+				<label class="form-label">Backup Type</label>
+				<select class="form-input" id="backup-type">
+					<option value="full">Full Backup</option>
+					<option value="incremental">Incremental</option>
+					<option value="files">Files Only</option>
+					<option value="database">Database Only</option>
+				</select>
+			</div>
+		`, async () => {
+			const domain = document.getElementById('backup-domain').value;
+			const type = document.getElementById('backup-type').value;
+			if (!domain) return false;
+			
+			try {
+				const response = await fetch(`${API_BASE}/backups`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ domain, type })
+				});
+				const result = await response.json();
+				showToast(result.message);
+				loadBackups();
+				return true;
+			} catch (error) {
+				showToast('Failed to create backup');
+				return false;
+			}
+		});
+	});
+}
+
+async function loadBackups() {
+	try {
+		const response = await fetch(`${API_BASE}/backups`);
+		const backups = await response.json();
+		
+		const backupList = document.getElementById('backup-list');
+		if (backups.length === 0) {
+			backupList.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--muted);">No backups found</td></tr>';
+			return;
+		}
+		
+		backupList.innerHTML = backups.map(backup => `
+			<tr>
+				<td>${backup.name}</td>
+				<td>${formatSize(backup.size)}</td>
+				<td><span class="pill">${backup.type}</span></td>
+				<td>${new Date(backup.created).toLocaleDateString()}</td>
+				<td>
+					<div class="actions">
+						<button class="btn btn--sm btn--ghost" onclick="downloadBackup('${backup.name}')">Download</button>
+						<button class="btn btn--sm btn--ghost" onclick="restoreBackup('${backup.name}')">Restore</button>
+						<button class="btn btn--sm btn--danger" onclick="deleteBackup('${backup.name}')">Delete</button>
+					</div>
+				</td>
+			</tr>
+		`).join('');
+	} catch (error) {
+		console.error('Failed to load backups:', error);
+		const backupList = document.getElementById('backup-list');
+		backupList.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load backups</td></tr>';
+	}
+}
+
+window.downloadBackup = async (filename) => {
+	try {
+		window.open(`${API_BASE}/backups/${filename}`);
+		showToast(`Downloading ${filename}`);
+	} catch (error) {
+		showToast('Download failed');
+	}
+};
+
+window.restoreBackup = async (filename) => {
+	const domain = prompt('Enter domain to restore to:');
+	if (!domain) return;
+	
+	try {
+		const response = await fetch(`${API_BASE}/backups/${filename}/restore`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ domain })
+		});
+		const result = await response.json();
+		showToast(result.message);
+	} catch (error) {
+		showToast('Restore failed');
+	}
+};
+
+window.deleteBackup = async (filename) => {
+	if (!confirm(`Delete backup "${filename}"?`)) return;
+	
+	try {
+		const response = await fetch(`${API_BASE}/backups/${filename}`, {
+			method: 'DELETE'
+		});
+		const result = await response.json();
+		showToast(result.message);
+		loadBackups();
+	} catch (error) {
+		showToast('Delete failed');
+	}
+};
+
+function renderCron() {
+	mount(`
+		<div class="panel">
+			<div class="panel__header">
+				<div class="panel__title">Cron Jobs</div>
+				<button class="btn" id="btn-add-cron">Add Cron Job</button>
+			</div>
+			<table class="table">
+				<thead><tr><th>Domain</th><th>Schedule</th><th>Command</th><th>Status</th><th>Actions</th></tr></thead>
+				<tbody id="cron-list">
+					<tr><td colspan="5" style="text-align: center; color: var(--muted);">Loading cron jobs...</td></tr>
+				</tbody>
+			</table>
+		</div>
+	`);
+
+	loadCronJobs();
+
+	document.getElementById('btn-add-cron').addEventListener('click', () => {
+		showModal('Add Cron Job', `
+			<div class="form-group">
+				<label class="form-label">Domain</label>
+				<input type="text" class="form-input" id="cron-domain" placeholder="example.com" />
+			</div>
+			<div class="form-group">
+				<label class="form-label">Schedule (cron format)</label>
+				<input type="text" class="form-input" id="cron-schedule" placeholder="0 2 * * *" />
+				<small style="color: var(--muted); margin-top: 4px; display: block;">Daily at 2 AM: 0 2 * * *</small>
+			</div>
+			<div class="form-group">
+				<label class="form-label">Command</label>
+				<input type="text" class="form-input" id="cron-command" placeholder="/usr/bin/php /var/www/example.com/backup.php" />
+			</div>
+			<div class="form-group">
+				<label class="form-label">Description</label>
+				<input type="text" class="form-input" id="cron-description" placeholder="Daily backup script" />
+			</div>
+		`, async () => {
+			const domain = document.getElementById('cron-domain').value;
+			const schedule = document.getElementById('cron-schedule').value;
+			const command = document.getElementById('cron-command').value;
+			const description = document.getElementById('cron-description').value;
+			
+			if (!domain || !schedule || !command) return false;
+			
+			try {
+				const response = await fetch(`${API_BASE}/cron`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ domain, schedule, command, description })
+				});
+				const result = await response.json();
+				showToast(result.message);
+				loadCronJobs();
+				return true;
+			} catch (error) {
+				showToast('Failed to add cron job');
+				return false;
+			}
+		});
+	});
+}
+
+async function loadCronJobs() {
+	try {
+		const response = await fetch(`${API_BASE}/cron`);
+		const jobs = await response.json();
+		
+		const cronList = document.getElementById('cron-list');
+		if (jobs.length === 0) {
+			cronList.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--muted);">No cron jobs found</td></tr>';
+			return;
+		}
+		
+		cronList.innerHTML = jobs.map(job => `
+			<tr>
+				<td>${job.domain}</td>
+				<td><code>${job.schedule}</code></td>
+				<td>${job.command}</td>
+				<td><span class="pill" style="background: ${job.enabled ? 'var(--success)' : 'var(--muted)'}">${job.enabled ? 'Active' : 'Disabled'}</span></td>
+				<td>
+					<div class="actions">
+						<button class="btn btn--sm btn--ghost" onclick="executeCron('${job.id}')">Run</button>
+						<button class="btn btn--sm btn--danger" onclick="deleteCron('${job.id}')">Delete</button>
+					</div>
+				</td>
+			</tr>
+		`).join('');
+	} catch (error) {
+		console.error('Failed to load cron jobs:', error);
+		const cronList = document.getElementById('cron-list');
+		cronList.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load cron jobs</td></tr>';
+	}
+}
+
+window.executeCron = async (id) => {
+	try {
+		const response = await fetch(`${API_BASE}/cron/${id}/execute`, {
+			method: 'POST'
+		});
+		const result = await response.json();
+		showToast(result.message);
+	} catch (error) {
+		showToast('Failed to execute cron job');
+	}
+};
+
+window.deleteCron = async (id) => {
+	if (!confirm('Delete this cron job?')) return;
+	
+	try {
+		const response = await fetch(`${API_BASE}/cron/${id}`, {
+			method: 'DELETE'
+		});
+		const result = await response.json();
+		showToast(result.message);
+		loadCronJobs();
+	} catch (error) {
+		showToast('Failed to delete cron job');
+	}
+};
+
+function renderLogs() {
+	mount(`
+		<div class="panel">
+			<div class="panel__header">
+				<div class="panel__title">Logs</div>
+				<div class="actions">
+					<button class="btn btn--ghost" id="btn-refresh-logs">Refresh</button>
+					<button class="btn btn--ghost" id="btn-clear-logs">Clear</button>
+				</div>
+			</div>
+			<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;">
+				<div>
+					<h4>Log Files</h4>
+					<div id="log-files" style="max-height: 400px; overflow-y: auto;">
+						<div style="text-align: center; color: var(--muted);">Loading...</div>
+					</div>
+				</div>
+				<div>
+					<h4>Log Content</h4>
+					<pre id="log-content" style="background: var(--elev); padding: 12px; border-radius: 8px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap;"></pre>
+				</div>
+			</div>
+		</div>
+	`);
+
+	loadLogFiles();
+
+	document.getElementById('btn-refresh-logs').addEventListener('click', () => {
+		loadLogFiles();
+	});
+
+	document.getElementById('btn-clear-logs').addEventListener('click', () => {
+		const selectedFile = document.querySelector('.log-file.active');
+		if (!selectedFile) {
+			showToast('Select a log file first');
+			return;
+		}
+		
+		if (confirm('Clear this log file?')) {
+			clearLogFile(selectedFile.dataset.file);
+		}
+	});
+}
+
+async function loadLogFiles() {
+	try {
+		const response = await fetch(`${API_BASE}/logs/files`);
+		const files = await response.json();
+		
+		const logFiles = document.getElementById('log-files');
+		if (files.length === 0) {
+			logFiles.innerHTML = '<div style="text-align: center; color: var(--muted);">No log files found</div>';
+			return;
+		}
+		
+		logFiles.innerHTML = files.map(file => `
+			<div class="log-file" data-file="${file.path}" style="padding: 8px; margin-bottom: 4px; background: var(--elev); border-radius: 6px; cursor: pointer;">
+				<div style="font-weight: 500;">${file.name}</div>
+				<div style="font-size: 12px; color: var(--muted);">${formatSize(file.size)} • ${new Date(file.modified).toLocaleDateString()}</div>
+			</div>
+		`).join('');
+		
+		// Add click handlers
+		document.querySelectorAll('.log-file').forEach(file => {
+			file.addEventListener('click', () => {
+				document.querySelectorAll('.log-file').forEach(f => f.classList.remove('active'));
+				file.classList.add('active');
+				loadLogContent(file.dataset.file);
+			});
+		});
+		
+		// Load first file by default
+		if (files.length > 0) {
+			const firstFile = document.querySelector('.log-file');
+			firstFile.classList.add('active');
+			loadLogContent(firstFile.dataset.file);
+		}
+	} catch (error) {
+		console.error('Failed to load log files:', error);
+		const logFiles = document.getElementById('log-files');
+		logFiles.innerHTML = '<div style="text-align: center; color: var(--danger);">Failed to load log files</div>';
+	}
+}
+
+async function loadLogContent(filePath) {
+	try {
+		const response = await fetch(`${API_BASE}/logs/content?file=${encodeURIComponent(filePath)}&lines=100`);
+		const result = await response.json();
+		
+		const logContent = document.getElementById('log-content');
+		logContent.textContent = result.content || 'No content available';
+	} catch (error) {
+		console.error('Failed to load log content:', error);
+		const logContent = document.getElementById('log-content');
+		logContent.textContent = 'Failed to load log content';
+	}
+}
+
+async function clearLogFile(filePath) {
+	try {
+		const response = await fetch(`${API_BASE}/logs/clear`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ file: filePath })
+		});
+		const result = await response.json();
+		showToast(result.message);
+		loadLogContent(filePath);
+	} catch (error) {
+		showToast('Failed to clear log file');
+	}
 }
 
 

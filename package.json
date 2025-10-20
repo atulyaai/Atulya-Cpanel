@@ -1,6 +1,6 @@
 {
   "name": "atulya-panel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Lightweight, modern hosting control panel",
   "main": "server.js",
   "scripts": {
