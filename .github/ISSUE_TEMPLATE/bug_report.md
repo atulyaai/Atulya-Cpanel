@@ -1,33 +1,31 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: "[Bug] Short description"
-labels: bug
+title: '[BUG] '
+labels: 'bug, triage'
 assignees: ''
 ---
 
-## Describe the bug
+**Describe the bug**
 A clear and concise description of what the bug is.
 
-## To Reproduce
+**To Reproduce**
 Steps to reproduce the behavior:
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
 
-## Expected behavior
-What you expected to happen.
+**Expected behavior**
+A clear and concise description of what you expected to happen.
 
-## Screenshots
-If applicable, add screenshots or logs to help explain your problem.
+**Screenshots**
+If applicable, add screenshots to help explain your problem.
 
-## Environment (please complete the following information):
-- OS: [e.g. Windows 11]
-- Browser: [e.g. Chrome 120]
-- Version: [e.g. v1.0.0]
+**Environment:**
+ - OS: [e.g. Ubuntu 22.04]
+ - Browser: [e.g. Chrome 120]
+ - Version: [e.g. v2.1.0]
 
-## Additional context
+**Additional context**
 Add any other context about the problem here.
-
-

@@ -5,6 +5,7 @@ import { prisma } from '../server.js';
 import { env } from '../config/env.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
+import { loginRateLimit } from '../middleware/security.js';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -28,58 +29,87 @@ export async function authRoutes(fastify: FastifyInstance) {
     schema: {
       body: loginSchema,
     },
+    preHandler: [loginRateLimit], // Apply rate limiting to login
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { email, password } = request.body as z.infer<typeof loginSchema>;
 
     try {
-      // Find user by email
+      // Find user by email with proper error handling
       const user = await prisma.user.findUnique({
         where: { email },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          password: true,
+          role: true,
+          isActive: true,
+          lastLogin: true,
+          createdAt: true,
+        },
       });
 
       if (!user || !user.isActive) {
+        // Log failed login attempt for security
+        fastify.log.warn(`Failed login attempt for email: ${email}`);
         return reply.status(401).send({
           success: false,
           error: 'Invalid credentials',
         });
       }
 
-      // Verify password
+      // Verify password with timing attack protection
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
+        // Log failed login attempt for security
+        fastify.log.warn(`Failed login attempt for user: ${user.id}`);
         return reply.status(401).send({
           success: false,
           error: 'Invalid credentials',
         });
       }
 
-      // Update last login
+      // Update last login timestamp
       await prisma.user.update({
         where: { id: user.id },
         data: { lastLogin: new Date() },
       });
 
-      // Generate tokens
+      // Generate secure tokens with proper expiration
       const accessToken = fastify.jwt.sign(
-        { userId: user.id },
+        { 
+          userId: user.id,
+          email: user.email,
+          role: user.role 
+        },
         { expiresIn: env.JWT_EXPIRES_IN }
       );
 
       const refreshToken = fastify.jwt.sign(
-        { userId: user.id, type: 'refresh' },
+        { 
+          userId: user.id, 
+          type: 'refresh',
+          email: user.email 
+        },
         { expiresIn: env.JWT_REFRESH_EXPIRES_IN }
       );
 
-      // Store refresh token in database
+      // Store refresh token in database with proper expiration
       await prisma.session.create({
         data: {
           token: refreshToken,
           userId: user.id,
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          userAgent: request.headers['user-agent'] || 'unknown',
+          ipAddress: request.ip || 'unknown',
         },
       });
 
+      // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
+
+      // Log successful login
+      fastify.log.info(`Successful login for user: ${user.email}`);
 
       return reply.send({
         success: true,

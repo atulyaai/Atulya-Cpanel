@@ -1,5 +1,6 @@
 <template>
   <div class="sidebar">
+    <!-- Application header with logo and version -->
     <div class="p-6 border-b border-gray-700">
       <div class="flex items-center space-x-3">
         <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
@@ -12,6 +13,7 @@
       </div>
     </div>
 
+    <!-- Navigation menu -->
     <nav class="p-4">
       <ul class="space-y-2">
         <li v-for="item in menuItems" :key="item.route">
@@ -22,6 +24,7 @@
           >
             <i :class="item.icon" class="text-sm"></i>
             <span>{{ item.label }}</span>
+            <!-- Badge for notifications or status indicators -->
             <span
               v-if="item.badge"
               class="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full"
@@ -33,6 +36,7 @@
       </ul>
     </nav>
 
+    <!-- User profile section at bottom -->
     <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
       <div class="flex items-center space-x-3">
         <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
@@ -52,8 +56,13 @@ import { computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import type { MenuItem } from '../types';
 
+// Access authentication store for user data and permissions
 const authStore = useAuthStore();
 
+/**
+ * Computed property that generates navigation menu items based on user role
+ * Admin users get additional menu items for user management
+ */
 const menuItems = computed<MenuItem[]>(() => {
   const items: MenuItem[] = [
     {
@@ -108,7 +117,7 @@ const menuItems = computed<MenuItem[]>(() => {
     },
   ];
 
-  // Add admin-only items
+  // Add admin-only menu items before Settings
   if (authStore.isAdmin) {
     items.splice(-1, 0, {
       label: 'Users',
@@ -123,11 +132,12 @@ const menuItems = computed<MenuItem[]>(() => {
 </script>
 
 <style scoped>
+/* Sidebar container with dark theme and fixed positioning */
 .sidebar {
   @apply bg-gray-900 text-white w-64 min-h-screen fixed left-0 top-0 z-40;
 }
 
-/* Active route styling */
+/* Active route highlighting for current page */
 .router-link-active {
   @apply bg-primary-600 text-white;
 }

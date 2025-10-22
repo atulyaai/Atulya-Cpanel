@@ -1,5 +1,48 @@
 <template>
   <div class="space-y-6">
+    <!-- Notification Container -->
+    <div class="fixed top-4 right-4 z-50 space-y-2">
+      <div 
+        v-for="notification in notifications" 
+        :key="notification.id"
+        class="max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden"
+        :class="{
+          'border-l-4 border-green-400': notification.type === 'success',
+          'border-l-4 border-red-400': notification.type === 'error',
+          'border-l-4 border-yellow-400': notification.type === 'warning',
+          'border-l-4 border-blue-400': notification.type === 'info'
+        }"
+      >
+        <div class="p-4">
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <i 
+                :class="{
+                  'pi pi-check-circle text-green-400': notification.type === 'success',
+                  'pi pi-times-circle text-red-400': notification.type === 'error',
+                  'pi pi-exclamation-triangle text-yellow-400': notification.type === 'warning',
+                  'pi pi-info-circle text-blue-400': notification.type === 'info'
+                }"
+                class="h-6 w-6"
+              ></i>
+            </div>
+            <div class="ml-3 w-0 flex-1 pt-0.5">
+              <p class="text-sm font-medium text-gray-900">{{ notification.title }}</p>
+              <p class="mt-1 text-sm text-gray-500">{{ notification.message }}</p>
+            </div>
+            <div class="ml-4 flex-shrink-0 flex">
+              <button 
+                @click="removeNotification(notification.id)"
+                class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <i class="pi pi-times h-5 w-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Page header -->
     <div class="flex items-center justify-between">
       <div>
@@ -14,8 +57,43 @@
       </div>
     </div>
 
-    <!-- Stats cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Interactive Quick Actions -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Quick Actions</h3>
+        <span class="text-sm text-gray-500">One-click operations</span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button 
+          @click="createSite"
+          class="flex flex-col items-center p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 group"
+        >
+          <i class="pi pi-plus text-2xl text-gray-400 group-hover:text-primary-600 mb-2"></i>
+          <span class="text-sm font-medium text-gray-600 group-hover:text-primary-700">Create Site</span>
+        </button>
+        <button 
+          @click="createDatabase"
+          class="flex flex-col items-center p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200 group"
+        >
+          <i class="pi pi-database text-2xl text-gray-400 group-hover:text-green-600 mb-2"></i>
+          <span class="text-sm font-medium text-gray-600 group-hover:text-green-700">Create Database</span>
+        </button>
+        <button 
+          @click="createEmail"
+          class="flex flex-col items-center p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group"
+        >
+          <i class="pi pi-envelope text-2xl text-gray-400 group-hover:text-purple-600 mb-2"></i>
+          <span class="text-sm font-medium text-gray-600 group-hover:text-purple-700">Create Email</span>
+        </button>
+        <button 
+          @click="generateSSL"
+          class="flex flex-col items-center p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 group"
+        >
+          <i class="pi pi-shield text-2xl text-gray-400 group-hover:text-orange-600 mb-2"></i>
+          <span class="text-sm font-medium text-gray-600 group-hover:text-orange-700">Generate SSL</span>
+        </button>
+      </div>
+    </div>
       <div class="card">
         <div class="flex items-center">
           <div class="p-3 bg-blue-100 rounded-lg">
@@ -106,6 +184,7 @@
         </div>
       </div>
     </div>
+
 
     <!-- System metrics -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -347,8 +426,12 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useWebSocket } from '../composables/useWebSocket';
+import { useNotifications } from '../composables/useNotifications';
 
 const authStore = useAuthStore();
+
+// Notification system
+const { notifications, success, error, warning, info, removeNotification } = useNotifications();
 
 // WebSocket composable
 const {
@@ -372,6 +455,7 @@ const stats = ref({
   emails: 0,
   backups: 0,
 });
+
 
 const recentActivity = ref([
   {
@@ -422,13 +506,140 @@ async function refreshServices() {
   console.log('Refreshing services...');
 }
 
+// Interactive quick action functions
+async function createSite() {
+  try {
+    // Show loading state
+    console.log('Creating new site...');
+    
+    // Real API call to create site
+    const response = await fetch('/api/v1/sites', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({
+        domain: `site-${Date.now()}.example.com`,
+        documentRoot: `/var/www/site-${Date.now()}`,
+        phpVersion: '8.1',
+        sslEnabled: false
+      })
+    });
+    
+    if (response.ok) {
+      success('Site Created', 'New website has been created successfully!');
+      await loadDashboardData();
+    } else {
+      throw new Error('Failed to create site');
+    }
+  } catch (error) {
+    error('Site Creation Failed', 'Failed to create new website. Please try again.');
+    console.error('Failed to create site:', error);
+  }
+}
+
+async function createDatabase() {
+  try {
+    console.log('Creating new database...');
+    
+    // Real API call to create database
+    const response = await fetch('/api/v1/databases', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({
+        name: `db_${Date.now()}`,
+        user: `user_${Date.now()}`,
+        password: 'secure_password_123'
+      })
+    });
+    
+    if (response.ok) {
+      success('Database Created', 'New database has been created successfully!');
+      await loadDashboardData();
+    } else {
+      throw new Error('Failed to create database');
+    }
+  } catch (error) {
+    error('Database Creation Failed', 'Failed to create new database. Please try again.');
+    console.error('Failed to create database:', error);
+  }
+}
+
+async function createEmail() {
+  try {
+    console.log('Creating new email account...');
+    
+    // Real API call to create email
+    const response = await fetch('/api/v1/email/accounts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({
+        email: `user${Date.now()}@example.com`,
+        password: 'secure_password_123',
+        domain: 'example.com'
+      })
+    });
+    
+    if (response.ok) {
+      success('Email Account Created', 'New email account has been created successfully!');
+      await loadDashboardData();
+    } else {
+      throw new Error('Failed to create email account');
+    }
+  } catch (error) {
+    error('Email Creation Failed', 'Failed to create new email account. Please try again.');
+    console.error('Failed to create email account:', error);
+  }
+}
+
+async function generateSSL() {
+  try {
+    console.log('Generating SSL certificate...');
+    
+    // Real API call to generate SSL
+    const response = await fetch('/api/v1/ssl/certificates', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({
+        domain: `site-${Date.now()}.example.com`,
+        challengeType: 'http-01',
+        autoRenew: true
+      })
+    });
+    
+    if (response.ok) {
+      success('SSL Certificate Generated', 'SSL certificate has been generated successfully!');
+      await loadDashboardData();
+    } else {
+      throw new Error('Failed to generate SSL certificate');
+    }
+  } catch (error) {
+    error('SSL Generation Failed', 'Failed to generate SSL certificate. Please try again.');
+    console.error('Failed to generate SSL certificate:', error);
+  }
+}
+
 async function loadDashboardData() {
   try {
-    // Load dashboard statistics
+    // Load dashboard statistics with proper authentication
+    const headers = {
+      'Authorization': `Bearer ${authStore.token}`
+    };
+    
     const [sitesResponse, databasesResponse, emailsResponse] = await Promise.all([
-      fetch('/api/v1/sites'),
-      fetch('/api/v1/databases'),
-      fetch('/api/v1/email/accounts')
+      fetch('/api/v1/sites', { headers }),
+      fetch('/api/v1/databases', { headers }),
+      fetch('/api/v1/email/accounts', { headers })
     ]);
 
     if (sitesResponse.ok) {
@@ -449,6 +660,7 @@ async function loadDashboardData() {
     console.error('Failed to load dashboard data:', error);
   }
 }
+
 
 onMounted(async () => {
   await loadDashboardData();

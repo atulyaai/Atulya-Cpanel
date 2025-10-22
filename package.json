@@ -1,0 +1,152 @@
+{
+  "name": "atulya-panel",
+  "version": "2.1.0",
+  "description": "Production-ready cPanel alternative with modern tech stack",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "start": "npm run start:backend",
+    "start:backend": "cd backend && npm start",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:e2e": "cd backend && npm run test:e2e",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:fix": "npm run lint:fix:backend && npm run lint:fix:frontend",
+    "lint:fix:backend": "cd backend && npm run lint:fix",
+    "lint:fix:frontend": "cd frontend && npm run lint",
+    "db:generate": "cd backend && npm run db:generate",
+    "db:migrate": "cd backend && npm run db:migrate",
+    "db:seed": "cd backend && npm run db:seed",
+    "db:reset": "cd backend && npm run db:reset",
+    "setup": "npm install && npm run setup:backend && npm run setup:frontend",
+    "setup:backend": "cd backend && npm install && npm run db:generate && npm run db:migrate && npm run db:seed",
+    "setup:frontend": "cd frontend && npm install",
+    "clean": "npm run clean:backend && npm run clean:frontend",
+    "clean:backend": "cd backend && rm -rf node_modules dist",
+    "clean:frontend": "cd frontend && rm -rf node_modules dist",
+    "security:audit": "npm audit --audit-level moderate",
+    "security:audit:backend": "cd backend && npm audit --audit-level moderate",
+    "security:audit:frontend": "cd frontend && npm audit --audit-level moderate",
+    "type-check": "npm run type-check:backend && npm run type-check:frontend",
+    "type-check:backend": "cd backend && npm run type-check",
+    "type-check:frontend": "cd frontend && npm run type-check",
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "cd backend && npm run format",
+    "format:frontend": "cd frontend && npm run format",
+    "docs:generate": "npm run docs:generate:backend && npm run docs:generate:frontend",
+    "docs:generate:backend": "cd backend && npm run docs:generate",
+    "docs:generate:frontend": "cd frontend && npm run docs:generate",
+    "release": "npm run build && npm run test && npm run lint",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v --remove-orphans"
+  },
+  "keywords": [
+    "cpanel",
+    "hosting",
+    "control-panel",
+    "web-hosting",
+    "typescript",
+    "vue3",
+    "fastify",
+    "postgresql",
+    "real-time-monitoring",
+    "file-manager",
+    "database-management",
+    "email-server",
+    "ssl-automation",
+    "open-source",
+    "production-ready",
+    "enterprise-security"
+  ],
+  "author": {
+    "name": "Atulya Panel Team",
+    "email": "team@atulya-panel.com",
+    "url": "https://atulya-panel.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atulya-panel/atulya-panel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/atulya-panel/atulya-panel/issues"
+  },
+  "homepage": "https://atulya-panel.com",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@types/node": "^20.10.4",
+    "typescript": "^5.3.3",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.1"
+  },
+  "packageManager": "npm@9.8.1",
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/atulya-panel"
+  },
+  "contributors": [
+    {
+      "name": "Atulya Panel Team",
+      "email": "team@atulya-panel.com"
+    }
+  ],
+  "files": [
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "ROADMAP.md",
+    "TESTING.md",
+    "DEVELOPMENT_GUIDE.md",
+    "GITHUB_ISSUES.md",
+    "REPOSITORY_SETTINGS.md",
+    "setup-dev.sh",
+    "setup-dev.bat"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  }
+}
