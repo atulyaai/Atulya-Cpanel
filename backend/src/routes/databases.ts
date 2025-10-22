@@ -1,7 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { DatabaseService } from '../services/DatabaseService.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/rbac.js';
 import { requireRole } from '../middleware/rbac.js';
 import { UserRole } from '@prisma/client';
 

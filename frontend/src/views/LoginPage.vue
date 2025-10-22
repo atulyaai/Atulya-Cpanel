@@ -31,7 +31,7 @@
                   type="email"
                   autocomplete="email"
                   required
-                  class="input"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Enter your email"
                 />
               </div>
@@ -49,7 +49,7 @@
                   type="password"
                   autocomplete="current-password"
                   required
-                  class="input"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Enter your password"
                 />
               </div>
@@ -79,7 +79,7 @@
               <button
                 type="submit"
                 :disabled="authStore.isLoading"
-                class="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <i v-if="authStore.isLoading" class="pi pi-spin pi-spinner mr-2"></i>
                 Sign in
@@ -100,7 +100,7 @@
             <div class="mt-6">
               <button
                 @click="showRegister = true"
-                class="w-full btn-secondary"
+                class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 Create account
               </button>
@@ -123,7 +123,7 @@
                   type="email"
                   autocomplete="email"
                   required
-                  class="input"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Enter your email"
                 />
               </div>
@@ -141,7 +141,7 @@
                   type="text"
                   autocomplete="username"
                   required
-                  class="input"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Choose a username"
                 />
               </div>
@@ -159,7 +159,7 @@
                   type="password"
                   autocomplete="new-password"
                   required
-                  class="input"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Create a password"
                 />
               </div>
@@ -177,7 +177,7 @@
                   type="password"
                   autocomplete="new-password"
                   required
-                  class="input"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Confirm your password"
                 />
               </div>
@@ -187,7 +187,7 @@
               <button
                 type="submit"
                 :disabled="authStore.isLoading"
-                class="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <i v-if="authStore.isLoading" class="pi pi-spin pi-spinner mr-2"></i>
                 Create account
@@ -208,7 +208,7 @@
             <div class="mt-6">
               <button
                 @click="showRegister = false"
-                class="w-full btn-secondary"
+                class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 Sign in
               </button>

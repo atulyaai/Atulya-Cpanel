@@ -5,7 +5,7 @@ import fp from 'fastify-plugin';
 
 async function auditLoggerPlugin(fastify: FastifyInstance) {
   // Add audit logging hook
-  fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.addHook('onRequest', async (request: FastifyRequest) => {
     // Skip audit logging for health checks and static files
     if (request.url === '/health' || request.url.startsWith('/uploads/')) {
       return;
@@ -26,15 +26,15 @@ async function auditLoggerPlugin(fastify: FastifyInstance) {
           details: {
             method: request.method,
             url: request.url,
-            query: request.query,
-            body: request.method !== 'GET' ? request.body : undefined,
+            query: request.query || null,
+            body: request.method !== 'GET' ? request.body || null : null,
           },
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'],
         },
       });
     } catch (error) {
-      fastify.log.error('Failed to create audit log:', error);
+      fastify.log.error('Failed to create audit log:', error as Error);
       // Don't fail the request if audit logging fails
     }
   });

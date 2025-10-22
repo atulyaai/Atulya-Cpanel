@@ -73,10 +73,10 @@ async function main() {
 
   // Create sample email account
   const sampleEmail = await prisma.emailAccount.upsert({
-    where: { address: 'test@example.com' },
+    where: { email: 'test@example.com' },
     update: {},
     create: {
-      address: 'test@example.com',
+      email: 'test@example.com',
       password: 'email_password',
       quota: 1073741824, // 1GB
       used: 0,
@@ -86,7 +86,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Sample email account created:', sampleEmail.address);
+  console.log('✅ Sample email account created:', sampleEmail.email);
 
   // Create sample domain
   const sampleDomain = await prisma.domain.upsert({

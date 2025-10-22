@@ -1,7 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { SSLProvider } from '../providers/SSLProvider.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/rbac.js';
 import { env } from '../config/env.js';
 
 const issueSSLSchema = z.object({
