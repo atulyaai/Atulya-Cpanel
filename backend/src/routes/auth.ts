@@ -29,6 +29,28 @@ export async function authRoutes(fastify: FastifyInstance) {
       body: loginSchema,
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
+    // Rate limiting for login attempts
+    const clientId = request.ip || 'unknown';
+    const loginAttempts = (fastify as any).loginAttempts || new Map();
+    const now = Date.now();
+    const windowMs = 15 * 60 * 1000; // 15 minutes
+    const maxAttempts = 5;
+    
+    // Clean up old attempts
+    for (const [key, data] of loginAttempts.entries()) {
+      if (data.resetTime < now) {
+        loginAttempts.delete(key);
+      }
+    }
+    
+    const attempts = loginAttempts.get(clientId) || { count: 0, resetTime: now + windowMs };
+    
+    if (attempts.count >= maxAttempts && attempts.resetTime > now) {
+      return reply.status(429).send({
+        success: false,
+        error: 'Too many login attempts. Please try again later.',
+      });
+    }
     const { email, password } = request.body as z.infer<typeof loginSchema>;
 
     try {
@@ -38,6 +60,11 @@ export async function authRoutes(fastify: FastifyInstance) {
       });
 
       if (!user || !user.isActive) {
+        // Increment failed attempts
+        attempts.count++;
+        loginAttempts.set(clientId, attempts);
+        (fastify as any).loginAttempts = loginAttempts;
+        
         return reply.status(401).send({
           success: false,
           error: 'Invalid credentials',
@@ -47,11 +74,20 @@ export async function authRoutes(fastify: FastifyInstance) {
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
+        // Increment failed attempts
+        attempts.count++;
+        loginAttempts.set(clientId, attempts);
+        (fastify as any).loginAttempts = loginAttempts;
+        
         return reply.status(401).send({
           success: false,
           error: 'Invalid credentials',
         });
       }
+      
+      // Reset attempts on successful login
+      loginAttempts.delete(clientId);
+      (fastify as any).loginAttempts = loginAttempts;
 
       // Update last login
       await prisma.user.update({
@@ -262,8 +298,21 @@ export async function authRoutes(fastify: FastifyInstance) {
     const { currentPassword, newPassword } = request.body as z.infer<typeof changePasswordSchema>;
 
     try {
+      // Get user with password from database
+      const userWithPassword = await prisma.user.findUnique({
+        where: { id: authRequest.user.id },
+        select: { password: true }
+      });
+
+      if (!userWithPassword) {
+        return reply.status(404).send({
+          success: false,
+          error: 'User not found',
+        });
+      }
+
       // Verify current password
-      const isValidPassword = await bcrypt.compare(currentPassword, authRequest.user.password);
+      const isValidPassword = await bcrypt.compare(currentPassword, userWithPassword.password);
       if (!isValidPassword) {
         return reply.status(400).send({
           success: false,

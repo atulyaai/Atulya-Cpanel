@@ -26,11 +26,32 @@ export async function authenticateUser(request: FastifyRequest, reply: FastifyRe
     }
 
     // Verify token and check expiration
-    const decoded = request.jwt.verify(token) as { 
+    let decoded: { 
       userId: string; 
       exp: number; 
       iat: number; 
     };
+    
+    try {
+      decoded = request.jwt.verify(token) as { 
+        userId: string; 
+        exp: number; 
+        iat: number; 
+      };
+    } catch (jwtError) {
+      return reply.status(401).send({
+        success: false,
+        error: 'Invalid token',
+      });
+    }
+    
+    // Validate token structure
+    if (!decoded.userId || typeof decoded.userId !== 'string') {
+      return reply.status(401).send({
+        success: false,
+        error: 'Invalid token format',
+      });
+    }
     
     // Check token expiration
     const now = Math.floor(Date.now() / 1000);

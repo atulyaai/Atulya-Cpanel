@@ -13,7 +13,16 @@ const createDatabaseSchema = z.object({
 });
 
 const executeQuerySchema = z.object({
-  query: z.string().min(1).max(10000),
+  query: z.string().min(1).max(10000).refine((query) => {
+    // Prevent dangerous SQL operations
+    const dangerousKeywords = [
+      'DROP', 'DELETE', 'TRUNCATE', 'ALTER', 'CREATE', 'INSERT', 'UPDATE',
+      'GRANT', 'REVOKE', 'EXEC', 'EXECUTE', 'SP_', 'XP_', '--', '/*', '*/'
+    ];
+    
+    const upperQuery = query.toUpperCase();
+    return !dangerousKeywords.some(keyword => upperQuery.includes(keyword));
+  }, 'Query contains dangerous SQL operations that are not allowed'),
 });
 
 export async function databaseRoutes(fastify: FastifyInstance) {

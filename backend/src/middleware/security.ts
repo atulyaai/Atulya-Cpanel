@@ -210,9 +210,14 @@ export function validateFilePath(path: string): boolean {
     return false;
   }
   
+  // Prevent null bytes and other dangerous characters
+  if (path.includes('\0') || path.includes('\x00')) {
+    return false;
+  }
+  
   // Only allow alphanumeric, dots, dashes, underscores, and forward slashes
   const pathRegex = /^[a-zA-Z0-9._\-\/]+$/;
-  return pathRegex.test(path);
+  return pathRegex.test(path) && path.length > 0 && path.length < 1000;
 }
 
 /**

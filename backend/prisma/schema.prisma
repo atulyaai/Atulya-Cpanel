@@ -28,6 +28,7 @@ model User {
   cronJobs     CronJob[]
   backups      Backup[]
   auditLogs    AuditLog[]
+  sessions     Session[]
 
   @@map("users")
 }
@@ -188,6 +189,9 @@ model Session {
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }

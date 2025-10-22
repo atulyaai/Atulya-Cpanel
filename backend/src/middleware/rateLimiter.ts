@@ -42,7 +42,7 @@ async function rateLimiterPlugin(fastify: FastifyInstance) {
 
     // Check if window has expired
     if (client.resetTime < now) {
-      client.count = 0;
+      client.count = 1; // Start with 1 for current request
       client.resetTime = now + windowMs;
     }
 

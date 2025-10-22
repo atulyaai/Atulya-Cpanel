@@ -276,6 +276,21 @@ export class FileManagerProvider {
       const stats = await stat(filePath);
       
       if (stats.isDirectory()) {
+        // Additional safety check for directory deletion
+        const entries = await readdir(filePath);
+        if (entries.length > 0) {
+          // Check if directory contains important files
+          const importantFiles = ['.htaccess', 'index.html', 'index.php', 'wp-config.php'];
+          const hasImportantFiles = entries.some(entry => importantFiles.includes(entry));
+          
+          if (hasImportantFiles) {
+            return {
+              success: false,
+              error: 'Directory contains important files and cannot be deleted'
+            };
+          }
+        }
+        
         await rmdir(filePath, { recursive: true });
       } else {
         await unlink(filePath);
@@ -286,6 +301,26 @@ export class FileManagerProvider {
         message: 'Deleted successfully'
       };
     } catch (error) {
+      // More specific error handling
+      if (error instanceof Error) {
+        if (error.code === 'ENOENT') {
+          return {
+            success: false,
+            error: 'File or directory not found'
+          };
+        } else if (error.code === 'EACCES') {
+          return {
+            success: false,
+            error: 'Permission denied'
+          };
+        } else if (error.code === 'EBUSY') {
+          return {
+            success: false,
+            error: 'File or directory is in use'
+          };
+        }
+      }
+      
       return {
         success: false,
         error: `Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`

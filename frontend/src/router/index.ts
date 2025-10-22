@@ -5,6 +5,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/login',
+      name: 'Login',
+      component: () => import('../views/LoginPage.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
       path: '/',
       redirect: '/dashboard',
     },
@@ -86,6 +92,12 @@ const router = createRouter({
 // Navigation guards
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
+  
+  // Check if user is already authenticated and trying to access login page
+  if (to.path === '/login' && authStore.isAuthenticated) {
+    next('/dashboard');
+    return;
+  }
   
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {

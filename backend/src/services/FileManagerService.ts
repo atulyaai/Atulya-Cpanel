@@ -340,12 +340,18 @@ export class FileManagerService {
           };
         }
 
-        // Check file extension
+        // Check file extension - use the same validation as FileManagerProvider
         const ext = file.name.split('.').pop()?.toLowerCase();
-        if (ext && !['txt', 'html', 'css', 'js', 'json', 'xml', 'md', 'log', 'conf', 'ini'].includes(ext)) {
+        const allowedExtensions = [
+          'txt', 'html', 'css', 'js', 'ts', 'json', 'xml', 'yaml', 'yml',
+          'php', 'py', 'rb', 'go', 'java', 'cpp', 'c', 'h', 'sql',
+          'md', 'log', 'conf', 'ini', 'env', 'htaccess', 'gitignore'
+        ];
+        
+        if (ext && !allowedExtensions.includes(ext)) {
           return {
             success: false,
-            error: `File type .${ext} not allowed`
+            error: `File type .${ext} not allowed. Allowed types: ${allowedExtensions.join(', ')}`
           };
         }
 

@@ -131,7 +131,24 @@ export async function fileRoutes(fastify: FastifyInstance) {
       const authRequest = request as any;
       const { path, encoding } = request.query as z.infer<typeof readFileSchema>;
       
+      // Additional path validation
+      if (path.includes('..') || path.includes('~') || path.startsWith('/')) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid file path',
+        });
+      }
+      
       const content = await fileManagerService.readFile(authRequest.user, path, encoding as BufferEncoding);
+      
+      // Limit content size for response
+      const maxContentSize = 1024 * 1024; // 1MB
+      if (content.length > maxContentSize) {
+        return reply.status(413).send({
+          success: false,
+          error: 'File too large to display',
+        });
+      }
       
       return reply.send({
         success: true,
