@@ -42,15 +42,17 @@ export interface Database {
 // Email types
 export interface EmailAccount {
   id: string;
-  address: string;
+  email: string;
   password: string;
   quota: number;
   used: number;
+  forwardTo?: string;
+  catchAll: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   userId: string;
-  siteId: string;
+  siteId?: string;
 }
 
 // Domain types

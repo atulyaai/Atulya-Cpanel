@@ -80,6 +80,12 @@ const router = createRouter({
       component: () => import('../views/Profile.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/login',
+      name: 'Login',
+      component: () => import('../views/LoginPage.vue'),
+      meta: { requiresAuth: false },
+    },
   ],
 });
 
@@ -90,6 +96,12 @@ router.beforeEach(async (to, from, next) => {
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login');
+    return;
+  }
+  
+  // Redirect authenticated users away from login page
+  if (to.name === 'Login' && authStore.isAuthenticated) {
+    next('/dashboard');
     return;
   }
   

@@ -1,7 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { EmailService } from '../services/EmailService.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/rbac.js';
 
 const createEmailAccountSchema = z.object({
   email: secureEmailRegex(),

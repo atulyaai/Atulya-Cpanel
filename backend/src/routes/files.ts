@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { FileManagerService } from '../services/FileManagerService.js';
 import { requireAuth } from '../middleware/auth.js';
-import { apiRateLimit } from '../middleware/security.js';
+import { createRateLimit } from '../middleware/security.js';
 
 const listDirectorySchema = z.object({
   path: z.string().min(1),

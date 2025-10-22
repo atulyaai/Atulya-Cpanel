@@ -14,6 +14,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value && !!accessToken.value);
   const isAdmin = computed(() => user.value?.role === 'ADMIN');
   const isReseller = computed(() => user.value?.role === 'RESELLER');
+  const token = computed(() => accessToken.value);
 
   // Actions
   async function login(email: string, password: string) {
@@ -223,6 +224,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     isReseller,
+    token,
     
     // Actions
     login,

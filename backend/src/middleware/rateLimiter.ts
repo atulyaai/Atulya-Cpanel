@@ -25,7 +25,7 @@ async function rateLimiterPlugin(fastify: FastifyInstance) {
 
     // Clean up expired entries
     Object.keys(store).forEach(key => {
-      if (store[key].resetTime < now) {
+      if (store[key] && store[key].resetTime < now) {
         delete store[key];
       }
     });
