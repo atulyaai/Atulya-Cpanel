@@ -605,28 +605,62 @@ async function createFolder() {
   }
 }
 
-function renameFile(file: any) {
-  // TODO: Implement rename functionality
-  toast.add({
-    severity: 'info',
-    summary: 'Info',
-    detail: 'Rename functionality will be implemented',
-    life: 3000,
-  });
+async function renameFile(file: any) {
+  const newName = prompt(`Enter new name for "${file.name}":`, file.name);
+  if (!newName || newName === file.name) return;
+  
+  try {
+    const response = await apiClient.put('/files/rename', {
+      oldPath: file.path,
+      newPath: file.path.replace(file.name, newName)
+    });
+    
+    if (response.data.success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'File renamed successfully',
+        life: 3000,
+      });
+      await loadDirectory(currentPath.value);
+    }
+  } catch (err: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err.response?.data?.error || 'Failed to rename file',
+      life: 3000,
+    });
+  }
 }
 
-function deleteFile(file: any) {
+async function deleteFile(file: any) {
   if (!confirm(`Are you sure you want to delete "${file.name}"?`)) {
     return;
   }
   
-  // TODO: Implement delete functionality
-  toast.add({
-    severity: 'info',
-    summary: 'Info',
-    detail: 'Delete functionality will be implemented',
-    life: 3000,
-  });
+  try {
+    const response = await apiClient.delete('/files/delete', {
+      data: { path: file.path }
+    });
+    
+    if (response.data.success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'File deleted successfully',
+        life: 3000,
+      });
+      await loadDirectory(currentPath.value);
+    }
+  } catch (err: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err.response?.data?.error || 'Failed to delete file',
+      life: 3000,
+    });
+  }
 }
 
 function handleFileUpload(event: Event) {
@@ -637,13 +671,44 @@ function handleFileUpload(event: Event) {
 }
 
 async function uploadFilesToServer() {
-  // TODO: Implement file upload
-  toast.add({
-    severity: 'info',
-    summary: 'Info',
-    detail: 'File upload functionality will be implemented',
-    life: 3000,
-  });
+  if (uploadFiles.value.length === 0) return;
+  
+  loading.value = true;
+  try {
+    const formData = new FormData();
+    uploadFiles.value.forEach(file => {
+      formData.append('files', file);
+    });
+    formData.append('path', currentPath.value);
+    
+    const response = await apiClient.post('/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    if (response.data.success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: `${uploadFiles.value.length} file(s) uploaded successfully`,
+        life: 3000,
+      });
+      
+      showUploadModal.value = false;
+      uploadFiles.value = [];
+      await loadDirectory(currentPath.value);
+    }
+  } catch (err: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err.response?.data?.error || 'Failed to upload files',
+      life: 3000,
+    });
+  } finally {
+    loading.value = false;
+  }
 }
 
 // Watchers

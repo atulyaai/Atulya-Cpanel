@@ -193,6 +193,116 @@
         </div>
       </form>
     </Dialog>
+
+    <!-- View Database Modal -->
+    <Dialog v-model:visible="showViewModal" modal header="Database Viewer" :style="{ width: '800px' }">
+      <div v-if="selectedDatabase" class="space-y-6">
+        <!-- Database Info -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <h4 class="font-semibold text-gray-900 mb-2">Database Information</h4>
+            <div class="space-y-2 text-sm">
+              <div><span class="font-medium">Name:</span> {{ selectedDatabase.name }}</div>
+              <div><span class="font-medium">Username:</span> {{ selectedDatabase.username || 'N/A' }}</div>
+              <div><span class="font-medium">Size:</span> {{ formatBytes(Number(selectedDatabase.size)) }}</div>
+              <div><span class="font-medium">Status:</span> 
+                <span :class="selectedDatabase.isActive ? 'text-green-600' : 'text-red-600'">
+                  {{ selectedDatabase.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div v-if="databaseInfo">
+            <h4 class="font-semibold text-gray-900 mb-2">Additional Info</h4>
+            <div class="space-y-2 text-sm">
+              <div><span class="font-medium">Tables:</span> {{ databaseInfo.tableCount || 0 }}</div>
+              <div><span class="font-medium">Created:</span> {{ formatDate(databaseInfo.createdAt) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tables List -->
+        <div v-if="databaseTables.length > 0">
+          <h4 class="font-semibold text-gray-900 mb-2">Tables</h4>
+          <div class="grid grid-cols-3 gap-2">
+            <div v-for="table in databaseTables" :key="table" class="p-2 bg-gray-100 rounded text-sm">
+              {{ Object.values(table)[0] }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Query Interface -->
+        <div>
+          <h4 class="font-semibold text-gray-900 mb-2">SQL Query</h4>
+          <div class="space-y-3">
+            <textarea
+              v-model="queryText"
+              class="w-full p-3 border border-gray-300 rounded-md font-mono text-sm"
+              rows="4"
+              placeholder="Enter SQL query here..."
+            ></textarea>
+            <button @click="executeQuery" class="btn-primary">
+              <i class="pi pi-play mr-2"></i>
+              Execute Query
+            </button>
+          </div>
+        </div>
+
+        <!-- Query Results -->
+        <div v-if="queryResult" class="mt-4">
+          <h4 class="font-semibold text-gray-900 mb-2">Query Results</h4>
+          <div class="bg-gray-50 p-4 rounded-md overflow-x-auto">
+            <pre class="text-sm">{{ JSON.stringify(queryResult, null, 2) }}</pre>
+          </div>
+        </div>
+      </div>
+    </Dialog>
+
+    <!-- Edit Database Modal -->
+    <Dialog v-model:visible="showEditModal" modal header="Edit Database" :style="{ width: '500px' }">
+      <form @submit.prevent="updateDatabase" class="space-y-4">
+        <div>
+          <label class="label">Database Name</label>
+          <input
+            v-model="editForm.name"
+            type="text"
+            class="input"
+            placeholder="Enter database name"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="label">Username</label>
+          <input
+            v-model="editForm.username"
+            type="text"
+            class="input"
+            placeholder="Enter username"
+          />
+        </div>
+
+        <div>
+          <label class="label">New Password (Leave empty to keep current)</label>
+          <input
+            v-model="editForm.password"
+            type="password"
+            class="input"
+            placeholder="Enter new password"
+          />
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-4">
+          <button type="button" @click="showEditModal = false" class="btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" :disabled="loading" class="btn-primary">
+            <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
+            Update Database
+          </button>
+        </div>
+      </form>
+    </Dialog>
   </div>
 </template>
 
@@ -213,11 +323,23 @@ const stats = ref({
 });
 
 const showCreateModal = ref(false);
+const showViewModal = ref(false);
+const showEditModal = ref(false);
+const selectedDatabase = ref<Database | null>(null);
 const createForm = reactive({
   name: '',
   username: '',
   password: '',
 });
+const editForm = reactive({
+  name: '',
+  username: '',
+  password: '',
+});
+const databaseInfo = ref<any>(null);
+const databaseTables = ref<any[]>([]);
+const queryResult = ref<any>(null);
+const queryText = ref('');
 
 async function loadDatabases() {
   loading.value = true;
@@ -311,24 +433,114 @@ async function deleteDatabase(database: Database) {
   }
 }
 
-function viewDatabase(database: Database) {
-  // TODO: Implement database viewer
-  toast.add({
-    severity: 'info',
-    summary: 'Info',
-    detail: 'Database viewer will be implemented soon',
-    life: 3000,
-  });
+async function viewDatabase(database: Database) {
+  selectedDatabase.value = database;
+  showViewModal.value = true;
+  
+  try {
+    // Load database info
+    const infoResponse = await apiClient.get(`/databases/${database.id}/info`);
+    if (infoResponse.data.success) {
+      databaseInfo.value = infoResponse.data.data;
+    }
+    
+    // Load database tables (using a simple query)
+    const tablesResponse = await apiClient.post(`/databases/${database.id}/query`, {
+      query: 'SHOW TABLES'
+    });
+    if (tablesResponse.data.success) {
+      databaseTables.value = tablesResponse.data.data;
+    }
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load database information',
+      life: 3000,
+    });
+  }
 }
 
 function editDatabase(database: Database) {
-  // TODO: Implement database editing
-  toast.add({
-    severity: 'info',
-    summary: 'Info',
-    detail: 'Database editing will be implemented soon',
-    life: 3000,
+  selectedDatabase.value = database;
+  Object.assign(editForm, {
+    name: database.name,
+    username: database.username || '',
+    password: '',
   });
+  showEditModal.value = true;
+}
+
+async function updateDatabase() {
+  if (!selectedDatabase.value) return;
+  
+  loading.value = true;
+  try {
+    const updateData: any = {
+      name: editForm.name,
+      username: editForm.username,
+    };
+    
+    // Only include password if it's provided
+    if (editForm.password) {
+      updateData.password = editForm.password;
+    }
+    
+    const response = await apiClient.put(`/databases/${selectedDatabase.value.id}`, updateData);
+    if (response.data.success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Database updated successfully',
+        life: 3000,
+      });
+      
+      showEditModal.value = false;
+      Object.assign(editForm, {
+        name: '',
+        username: '',
+        password: '',
+      });
+      
+      await loadDatabases();
+      await loadStats();
+    }
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.error || 'Failed to update database',
+      life: 3000,
+    });
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function executeQuery() {
+  if (!selectedDatabase.value || !queryText.value.trim()) return;
+  
+  try {
+    const response = await apiClient.post(`/databases/${selectedDatabase.value.id}/query`, {
+      query: queryText.value
+    });
+    if (response.data.success) {
+      queryResult.value = response.data.data;
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Query executed successfully',
+        life: 3000,
+      });
+    }
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.error || 'Failed to execute query',
+      life: 3000,
+    });
+  }
 }
 
 async function refreshDatabases() {
@@ -342,6 +554,11 @@ function formatBytes(bytes: number): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatDate(dateString: string): string {
+  if (!dateString) return 'Never';
+  return new Date(dateString).toLocaleDateString();
 }
 
 onMounted(() => {
