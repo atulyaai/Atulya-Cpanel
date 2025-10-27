@@ -124,20 +124,11 @@ A modern, open-source web hosting control panel built with TypeScript, Vue 3, an
 ## 🚀 Quick Start
 
 ### Prerequisites
-
-| Requirement | Version | Purpose |
-|-------------|---------|---------|
-| **Node.js** | 20.0.0+ | Runtime environment |
-| **PostgreSQL** | 15.0+ | Primary database |
-| **MySQL/MariaDB** | 10.6+ | User databases |
-| **Redis** | 6.0+ | Session storage |
-| **System** | Ubuntu 22.04+ | Recommended OS |
+- **Node.js** 20.0.0+ | **PostgreSQL** 15.0+ | **Redis** 6.0+ | **Ubuntu** 22.04+ (recommended)
 
 ### 🛠️ Installation
 
-#### Option 1: Automated Setup (Recommended)
-
-**Linux/macOS:**
+#### Development Setup
 ```bash
 # Clone and setup
 git clone https://github.com/atulyaai/Atulya-Cpanel.git
@@ -146,38 +137,13 @@ chmod +x setup-dev.sh
 ./setup-dev.sh
 ```
 
-**Windows:**
-```cmd
-git clone https://github.com/atulyaai/Atulya-Cpanel.git
-cd Atulya-Cpanel
-setup-dev.bat
-```
-
-#### Option 2: Manual Setup
-
+#### Production Installation
 ```bash
-# 1. Clone repository
-git clone https://github.com/atulyaai/Atulya-Cpanel.git
-cd Atulya-Cpanel
-
-# 2. Backend setup
-cd backend
-npm install
-cp env.example .env
-# Edit .env with your configuration
-npm run db:generate
-npm run db:migrate
-npm run db:seed
-
-# 3. Frontend setup (new terminal)
-cd frontend
-npm install
-npm run dev
-
-# 4. Start backend (new terminal)
-cd backend
-npm run dev
+# One-click production installer
+curl -fsSL https://raw.githubusercontent.com/atulyaai/Atulya-Cpanel/main/install.sh | sudo bash
 ```
+
+> 📚 **Detailed Installation Guide**: See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for complete setup instructions.
 
 ### 🌐 Access the Application
 
