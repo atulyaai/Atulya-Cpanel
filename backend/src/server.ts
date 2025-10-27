@@ -22,6 +22,7 @@ import { sslRoutes } from './routes/ssl.js';
 import { userRoutes } from './routes/users.js';
 import { metricsRoutes } from './routes/metrics.js';
 import { monitoringRoutes } from './routes/monitoring.js';
+import { serviceRoutes } from './routes/services.js';
 import { setupWebSocket } from './utils/websocket.js';
 import { setupJobs } from './jobs/index.js';
 import path from 'path';
@@ -130,6 +131,7 @@ async function registerRoutes() {
   await fastify.register(userRoutes, { prefix: '/api/v1/users' });
   await fastify.register(metricsRoutes, { prefix: '/api/v1/metrics' });
   await fastify.register(monitoringRoutes, { prefix: '/api/v1/monitoring' });
+  await fastify.register(serviceRoutes, { prefix: '/api/v1' });
 }
 
 /**
