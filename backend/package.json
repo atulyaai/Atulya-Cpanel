@@ -16,35 +16,42 @@
     "test": "vitest",
     "test:e2e": "playwright test"
   },
-  "keywords": ["cpanel", "hosting", "control-panel", "fastify", "typescript"],
+  "keywords": [
+    "cpanel",
+    "hosting",
+    "control-panel",
+    "fastify",
+    "typescript"
+  ],
   "author": "Atulya Panel",
   "license": "MIT",
   "dependencies": {
-    "fastify": "^4.24.3",
     "@fastify/cors": "^8.4.0",
     "@fastify/jwt": "^7.2.4",
     "@fastify/multipart": "^8.0.0",
     "@fastify/static": "^6.12.0",
     "@fastify/websocket": "^8.3.1",
-    "fastify-plugin": "^4.5.1",
     "@prisma/client": "^5.7.1",
-    "prisma": "^5.7.1",
     "bcryptjs": "^2.4.3",
-    "zod": "^3.22.4",
     "bull": "^4.12.2",
+    "dotenv": "^16.3.1",
+    "fastify": "^4.24.3",
+    "fastify-plugin": "^4.5.1",
+    "fs-extra": "^11.2.0",
     "ioredis": "^5.3.2",
+    "mysql2": "^3.6.5",
+    "node-cron": "^3.0.3",
+    "prisma": "^5.7.1",
     "socket.io": "^4.7.4",
     "systeminformation": "^5.21.15",
-    "mysql2": "^3.6.5",
-    "fs-extra": "^11.2.0",
-    "dotenv": "^16.3.1",
-    "node-cron": "^3.0.3",
-    "ws": "^8.14.2"
+    "ws": "^8.14.2",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/node": "^20.10.4",
+    "@playwright/test": "^1.40.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.10.4",
     "@types/node-cron": "^3.0.11",
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^6.13.2",
@@ -53,8 +60,7 @@
     "prettier": "^3.1.1",
     "tsx": "^4.6.2",
     "typescript": "^5.3.3",
-    "vitest": "^1.0.4",
-    "@playwright/test": "^1.40.1"
+    "vitest": "^1.0.4"
   },
   "engines": {
     "node": ">=20.0.0"
