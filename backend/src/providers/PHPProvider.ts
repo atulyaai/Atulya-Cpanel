@@ -52,8 +52,7 @@ export class PHPProvider {
         }
       }
     } catch (error) {
-      console.warn('Could not detect PHP version:', error);
-    }
+      }
   }
 
   /**

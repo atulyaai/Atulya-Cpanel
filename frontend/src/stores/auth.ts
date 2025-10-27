@@ -45,7 +45,6 @@ export const useAuthStore = defineStore('auth', () => {
         return { success: false, error: response.data.error };
       }
     } catch (error: any) {
-      console.error('Login error:', error);
       return { 
         success: false, 
         error: error.response?.data?.error || 'Login failed' 
@@ -71,7 +70,6 @@ export const useAuthStore = defineStore('auth', () => {
         return { success: false, error: response.data.error };
       }
     } catch (error: any) {
-      console.error('Registration error:', error);
       return { 
         success: false, 
         error: error.response?.data?.error || 'Registration failed' 
@@ -91,7 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
         });
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      // Logout error handled silently
     } finally {
       // Clear state regardless of API call result
       user.value = null;
@@ -130,8 +128,6 @@ export const useAuthStore = defineStore('auth', () => {
         return await refreshAccessToken();
       }
     } catch (error: any) {
-      console.error('Auth check error:', error);
-      
       // Try to refresh token
       return await refreshAccessToken();
     } finally {
@@ -168,7 +164,6 @@ export const useAuthStore = defineStore('auth', () => {
         return false;
       }
     } catch (error) {
-      console.error('Token refresh error:', error);
       await logout();
       return false;
     }
@@ -207,7 +202,6 @@ export const useAuthStore = defineStore('auth', () => {
       await logout();
       return { success: true };
     } catch (error: any) {
-      console.error('Logout all error:', error);
       await logout(); // Logout locally anyway
       return { success: false, error: error.response?.data?.error || 'Logout failed' };
     }

@@ -4,10 +4,10 @@
       <!-- Left side -->
       <div class="flex items-center space-x-4">
         <button
-          @click="toggleSidebar"
           class="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 lg:hidden"
+          @click="toggleSidebar"
         >
-          <i class="pi pi-bars text-lg"></i>
+          <i class="pi pi-bars text-lg" />
         </button>
         
         <div class="hidden lg:block">
@@ -28,8 +28,8 @@
             type="text"
             placeholder="Search..."
             class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-          <i class="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+          >
+          <i class="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
         </div>
 
         <!-- Notifications -->
@@ -37,7 +37,7 @@
           class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
           @click="showNotifications = !showNotifications"
         >
-          <i class="pi pi-bell text-lg"></i>
+          <i class="pi pi-bell text-lg" />
           <span
             v-if="notificationCount > 0"
             class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
@@ -49,11 +49,11 @@
         <!-- User menu -->
         <div class="relative">
           <button
-            @click="showUserMenu = !showUserMenu"
             class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100"
+            @click="showUserMenu = !showUserMenu"
           >
             <div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
-              <i class="pi pi-user text-white text-sm"></i>
+              <i class="pi pi-user text-white text-sm" />
             </div>
             <div class="hidden md:block text-left">
               <p class="text-sm font-medium text-gray-900">
@@ -63,7 +63,7 @@
                 {{ authStore.user?.role }}
               </p>
             </div>
-            <i class="pi pi-chevron-down text-gray-500"></i>
+            <i class="pi pi-chevron-down text-gray-500" />
           </button>
 
           <!-- User dropdown -->
@@ -75,15 +75,15 @@
               to="/profile"
               class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
-              <i class="pi pi-user text-gray-500"></i>
+              <i class="pi pi-user text-gray-500" />
               <span>Profile</span>
             </router-link>
             
             <button
-              @click="handleLogout"
               class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              @click="handleLogout"
             >
-              <i class="pi pi-sign-out text-gray-500"></i>
+              <i class="pi pi-sign-out text-gray-500" />
               <span>Logout</span>
             </button>
           </div>
@@ -97,7 +97,9 @@
       class="absolute right-4 top-16 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
     >
       <div class="p-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
+        <h3 class="text-lg font-semibold text-gray-900">
+          Notifications
+        </h3>
       </div>
       <div class="max-h-64 overflow-y-auto">
         <div class="p-4 text-center text-gray-500">

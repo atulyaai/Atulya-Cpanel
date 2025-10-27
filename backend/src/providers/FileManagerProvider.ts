@@ -426,8 +426,7 @@ export class FileManagerProvider {
               });
             } catch (error) {
               // Skip files that can't be read
-              console.warn(`Skipping file ${fullPath}: ${error}`);
-            }
+              }
           }
         }
       }

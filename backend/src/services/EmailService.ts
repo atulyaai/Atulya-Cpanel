@@ -49,7 +49,6 @@ export class EmailService {
     try {
       return await this.provider.testConfiguration();
     } catch (error) {
-      console.error('Email server connection test failed:', error);
       return false;
     }
   }
@@ -61,7 +60,6 @@ export class EmailService {
     try {
       await this.provider.installEmailServer();
     } catch (error) {
-      console.error('Failed to install email server:', error);
       throw error;
     }
   }
@@ -86,7 +84,6 @@ export class EmailService {
 
       return domainInfo;
     } catch (error) {
-      console.error('Failed to create email domain:', error);
       throw error;
     }
   }
@@ -108,7 +105,6 @@ export class EmailService {
         }
       });
     } catch (error) {
-      console.error('Failed to delete email domain:', error);
       throw error;
     }
   }
@@ -133,7 +129,6 @@ export class EmailService {
         dkimSelector: 'default',
       }));
     } catch (error) {
-      console.error('Failed to list email domains:', error);
       throw error;
     }
   }
@@ -197,7 +192,6 @@ export class EmailService {
 
       return emailAccount as EmailAccountWithSite;
     } catch (error) {
-      console.error('Failed to create email account:', error);
       throw error;
     }
   }
@@ -226,7 +220,6 @@ export class EmailService {
 
       return accounts as EmailAccountWithSite[];
     } catch (error) {
-      console.error('Failed to get email accounts:', error);
       throw error;
     }
   }
@@ -253,7 +246,6 @@ export class EmailService {
 
       return account as EmailAccountWithSite | null;
     } catch (error) {
-      console.error('Failed to get email account:', error);
       throw error;
     }
   }
@@ -311,7 +303,6 @@ export class EmailService {
 
       return await this.getAccount(user, id) as EmailAccountWithSite;
     } catch (error) {
-      console.error('Failed to update email account:', error);
       throw error;
     }
   }
@@ -342,7 +333,6 @@ export class EmailService {
         }
       });
     } catch (error) {
-      console.error('Failed to delete email account:', error);
       throw error;
     }
   }
@@ -366,7 +356,6 @@ export class EmailService {
       const quota = await this.provider.getQuotaUsage(account.email);
       return quota;
     } catch (error) {
-      console.error('Failed to get quota usage:', error);
       throw error;
     }
   }
@@ -381,7 +370,6 @@ export class EmailService {
     try {
       return await this.provider.getServerStatus();
     } catch (error) {
-      console.error('Failed to get server status:', error);
       throw error;
     }
   }
@@ -443,7 +431,6 @@ export class EmailService {
         domains: domainStats,
       };
     } catch (error) {
-      console.error('Failed to get email statistics:', error);
       throw error;
     }
   }
@@ -476,7 +463,6 @@ export class EmailService {
 
       return accounts as EmailAccountWithSite[];
     } catch (error) {
-      console.error('Failed to get all email accounts:', error);
       throw error;
     }
   }

@@ -4,11 +4,15 @@
     <div class="p-6 border-b border-gray-700">
       <div class="flex items-center space-x-3">
         <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-          <i class="pi pi-cube text-white text-sm"></i>
+          <i class="pi pi-cube text-white text-sm" />
         </div>
         <div>
-          <h1 class="text-lg font-semibold text-white">Atulya Panel</h1>
-          <p class="text-xs text-gray-400">v2.1.0</p>
+          <h1 class="text-lg font-semibold text-white">
+            Atulya Panel
+          </h1>
+          <p class="text-xs text-gray-400">
+            v2.1.0
+          </p>
         </div>
       </div>
     </div>
@@ -16,13 +20,19 @@
     <!-- Navigation menu -->
     <nav class="p-4">
       <ul class="space-y-2">
-        <li v-for="item in menuItems" :key="item.route">
+        <li
+          v-for="item in menuItems"
+          :key="item.route"
+        >
           <router-link
             :to="item.route"
             class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
             :class="{ 'bg-primary-600 text-white': $route.name === item.route }"
           >
-            <i :class="item.icon" class="text-sm"></i>
+            <i
+              :class="item.icon"
+              class="text-sm"
+            />
             <span>{{ item.label }}</span>
             <!-- Badge for notifications or status indicators -->
             <span
@@ -40,11 +50,15 @@
     <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
       <div class="flex items-center space-x-3">
         <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-          <i class="pi pi-user text-white text-sm"></i>
+          <i class="pi pi-user text-white text-sm" />
         </div>
         <div class="flex-1">
-          <p class="text-sm text-white">{{ authStore.user?.username }}</p>
-          <p class="text-xs text-gray-400">{{ authStore.user?.role }}</p>
+          <p class="text-sm text-white">
+            {{ authStore.user?.username }}
+          </p>
+          <p class="text-xs text-gray-400">
+            {{ authStore.user?.role }}
+          </p>
         </div>
       </div>
     </div>

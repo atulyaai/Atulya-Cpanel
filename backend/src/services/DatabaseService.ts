@@ -100,7 +100,6 @@ export class DatabaseService {
 
       return database as DatabaseWithSite;
     } catch (error) {
-      console.error('Failed to create database:', error);
       throw error;
     }
   }
@@ -129,7 +128,6 @@ export class DatabaseService {
 
       return databases as DatabaseWithSite[];
     } catch (error) {
-      console.error('Failed to get databases:', error);
       throw error;
     }
   }
@@ -156,7 +154,6 @@ export class DatabaseService {
 
       return database as DatabaseWithSite | null;
     } catch (error) {
-      console.error('Failed to get database:', error);
       throw error;
     }
   }
@@ -182,7 +179,6 @@ export class DatabaseService {
 
       return await this.getDatabase(user, id) as DatabaseWithSite;
     } catch (error) {
-      console.error('Failed to update database:', error);
       throw error;
     }
   }
@@ -213,7 +209,6 @@ export class DatabaseService {
         }
       });
     } catch (error) {
-      console.error('Failed to delete database:', error);
       throw error;
     }
   }
@@ -246,7 +241,6 @@ export class DatabaseService {
 
       return info;
     } catch (error) {
-      console.error('Failed to get database info:', error);
       throw error;
     }
   }
@@ -275,7 +269,6 @@ export class DatabaseService {
       const result = await this.provider.executeQuery(database.name, query);
       return result;
     } catch (error) {
-      console.error('Failed to execute query:', error);
       throw error;
     }
   }
@@ -298,7 +291,6 @@ export class DatabaseService {
 
       await this.provider.backupDatabase(database.name, outputPath);
     } catch (error) {
-      console.error('Failed to backup database:', error);
       throw error;
     }
   }
@@ -330,7 +322,6 @@ export class DatabaseService {
         });
       }
     } catch (error) {
-      console.error('Failed to restore database:', error);
       throw error;
     }
   }
@@ -369,7 +360,6 @@ export class DatabaseService {
         activeDatabases: activeStats,
       };
     } catch (error) {
-      console.error('Failed to get statistics:', error);
       throw error;
     }
   }
@@ -402,7 +392,6 @@ export class DatabaseService {
 
       return databases as DatabaseWithSite[];
     } catch (error) {
-      console.error('Failed to get all databases:', error);
       throw error;
     }
   }
