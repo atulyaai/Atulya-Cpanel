@@ -33,7 +33,7 @@
 
     <!-- Toast notifications -->
     <Toast />
-    
+
     <!-- Confirmation dialogs -->
     <ConfirmDialog />
   </div>

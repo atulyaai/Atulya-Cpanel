@@ -332,7 +332,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import MonacoEditor from '@monaco-editor/vue';
+import MonacoEditor from '@guolao/vue-monaco-editor';
 import { apiClient } from '../api/client';
 
 const toast = useToast();

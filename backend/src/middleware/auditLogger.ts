@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyRequest } from 'fastify';
 import { prisma } from '../server.js';
 import { AuthenticatedRequest } from './auth.js';
 import fp from 'fastify-plugin';
@@ -30,11 +30,11 @@ async function auditLoggerPlugin(fastify: FastifyInstance) {
             body: request.method !== 'GET' ? request.body || null : null,
           },
           ipAddress: request.ip,
-          userAgent: request.headers['user-agent'],
+          userAgent: request.headers['user-agent'] || null,
         },
       });
     } catch (error) {
-      fastify.log.error('Failed to create audit log:', error as Error);
+      fastify.log.error({ error }, 'Failed to create audit log');
       // Don't fail the request if audit logging fails
     }
   });

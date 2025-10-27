@@ -6,7 +6,6 @@ import { User } from '@prisma/client';
 declare module 'fastify' {
   interface FastifyRequest {
     jwt: JWT;
-    user?: User;
   }
 }
 

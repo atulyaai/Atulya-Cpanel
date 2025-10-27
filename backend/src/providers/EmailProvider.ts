@@ -2,7 +2,6 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
-import { randomBytes } from 'crypto';
 import { env } from '../config/env.js';
 
 const execAsync = promisify(exec);
@@ -91,8 +90,8 @@ export class EmailProvider {
    */
   private async configurePostfix(): Promise<void> {
     const mainCf = `# Postfix configuration for Atulya Panel
-myhostname = mail.${process.env.HOSTNAME || 'localhost'}
-mydomain = ${process.env.HOSTNAME || 'localhost'}
+myhostname = mail.${process.env['HOSTNAME'] || 'localhost'}
+mydomain = ${process.env['HOSTNAME'] || 'localhost'}
 myorigin = $mydomain
 inet_interfaces = all
 inet_protocols = ipv4
@@ -273,10 +272,10 @@ info_log_path = /var/log/dovecot-info.log
       // Add password to Dovecot password file
       const passwdPath = path.join(this.virtualDir, 'passwd');
       const hashedPassword = await this.hashPassword(account.password);
-      await fs.appendFile(passwdPath, `${account.email}:{PLAIN}${hashedPassword}:1000:1000::${this.mailDir}/${account.domain}/${account.email.split('@')[0]}::\n`);
+      await fs.appendFile(passwdPath, `${account.email}:{PLAIN}${hashedPassword}:1000:1000::${this.mailDir}/${account.domain}/${account.email.split('@')[0]!}::\n`);
 
       // Create mail directory
-      const mailDir = path.join(this.mailDir, account.domain, account.email.split('@')[0]);
+      const mailDir = path.join(this.mailDir, account.domain, account.email.split('@')[0]!);
       await fs.ensureDir(mailDir);
       await execAsync(`chown -R vmail:vmail ${mailDir}`);
 
@@ -311,8 +310,8 @@ info_log_path = /var/log/dovecot-info.log
       await fs.writeFile(passwdPath, updatedPasswd);
 
       // Remove mail directory
-      const domain = email.split('@')[1];
-      const user = email.split('@')[0];
+      const domain = email.split('@')[1]!;
+      const user = email.split('@')[0]!;
       const mailDir = path.join(this.mailDir, domain, user);
       await fs.remove(mailDir);
 
@@ -359,7 +358,7 @@ info_log_path = /var/log/dovecot-info.log
         email,
         password: updates.password || '',
         quota: updates.quota || 1000,
-        domain: updates.domain || email.split('@')[1],
+        domain: updates.domain || email.split('@')[1]!,
         isActive: updates.isActive !== undefined ? updates.isActive : true,
         forwardTo: updates.forwardTo,
         catchAll: updates.catchAll,
@@ -387,7 +386,7 @@ info_log_path = /var/log/dovecot-info.log
             email,
             password: '', // Don't return passwords
             quota: 1000, // Default quota
-            domain: email.split('@')[1],
+            domain: email.split('@')[1]!,
             isActive: true,
           });
         }
@@ -405,8 +404,8 @@ info_log_path = /var/log/dovecot-info.log
    */
   async getQuotaUsage(email: string): Promise<EmailQuota> {
     try {
-      const domain = email.split('@')[1];
-      const user = email.split('@')[0];
+      const domain = email.split('@')[1]!;
+      const user = email.split('@')[0]!;
       const mailDir = path.join(this.mailDir, domain, user);
       
       if (!await fs.pathExists(mailDir)) {
@@ -420,7 +419,7 @@ info_log_path = /var/log/dovecot-info.log
 
       // Get directory size
       const { stdout } = await execAsync(`du -sb ${mailDir} 2>/dev/null || echo "0"`);
-      const used = parseInt(stdout.split('\t')[0]) || 0;
+      const used = parseInt(stdout.split('	')[0]!) || 0;
       const quota = 1000 * 1024 * 1024; // 1GB default quota
       const percentage = (used / quota) * 100;
 
@@ -561,6 +560,37 @@ info_log_path = /var/log/dovecot-info.log
         usedQuota: 0,
         domains: 0,
       };
+    }
+  }
+
+  async sendEmail(options: { to: string; subject: string; text: string; html?: string }): Promise<void> {
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      // Create a temporary file for the email content
+      const tempFile = `/tmp/email-${Date.now()}.txt`;
+      const emailContent = `To: ${options.to}
+Subject: ${options.subject}
+Content-Type: text/html; charset=UTF-8
+
+${options.html || options.text}`;
+      
+      // Write email content to temp file
+      const fs = await import('fs');
+      await fs.promises.writeFile(tempFile, emailContent);
+      
+      // Send email using sendmail
+      await execAsync(`sendmail ${options.to} < ${tempFile}`);
+      
+      // Clean up temp file
+      await fs.promises.unlink(tempFile);
+      
+      console.log(`Email sent to ${options.to}`);
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      throw error;
     }
   }
 }

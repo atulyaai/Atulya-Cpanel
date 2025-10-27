@@ -32,9 +32,17 @@ export default defineConfig({
           vendor: ['vue', 'vue-router', 'pinia'],
           ui: ['primevue', 'primeicons'],
           charts: ['echarts', 'vue-echarts'],
-          editor: ['monaco-editor', '@monaco-editor/loader'],
+          editor: ['monaco-editor', '@monaco-editor/loader', '@guolao/vue-monaco-editor'],
         },
       },
     },
+  },
+  optimizeDeps: {
+    include: ['primevue', 'primeicons', '@guolao/vue-monaco-editor'],
+    exclude: ['primevue'],
+  },
+  define: {
+    __VUE_OPTIONS_API__: true,
+    __VUE_PROD_DEVTOOLS__: false,
   },
 });

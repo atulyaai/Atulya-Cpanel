@@ -2,9 +2,8 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { stat, readdir, readFile, writeFile, mkdir, rmdir, unlink, chmod, chown } from 'fs/promises';
-import { createReadStream, createWriteStream } from 'fs';
-import { pipeline } from 'stream/promises';
+import { stat, readdir, readFile, writeFile, mkdir, rmdir, unlink, chmod } from 'fs/promises';
+// import { createReadStream, createWriteStream } from 'fs';
 
 const execAsync = promisify(exec);
 

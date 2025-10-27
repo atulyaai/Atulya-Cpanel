@@ -5,30 +5,31 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "vue": "^3.3.8",
-    "vue-router": "^4.2.5",
-    "pinia": "^2.1.7",
-    "axios": "^1.6.2",
-    "primevue": "^3.53.0",
-    "primeicons": "^6.0.1",
-    "echarts": "^5.4.3",
-    "vue-echarts": "^6.6.1",
+    "@guolao/vue-monaco-editor": "^1.6.0",
     "@monaco-editor/loader": "^1.4.0",
-    "monaco-editor": "^0.44.0",
-    "socket.io-client": "^4.7.4",
+    "axios": "^1.6.2",
     "date-fns": "^2.30.0",
+    "echarts": "^5.4.3",
     "lodash-es": "^4.17.21",
+    "monaco-editor": "^0.44.0",
+    "pinia": "^2.1.7",
+    "primeicons": "^6.0.1",
+    "primevue": "^3.53.0",
+    "socket.io-client": "^4.7.4",
+    "vue": "^3.3.8",
+    "vue-echarts": "^6.6.1",
+    "vue-router": "^4.2.5",
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/node": "^20.10.4",
     "@types/lodash-es": "^4.17.12",
+    "@types/node": "^20.10.4",
     "@vitejs/plugin-vue": "^4.5.2",
     "@vue/tsconfig": "^0.4.0",
     "autoprefixer": "^10.4.16",
@@ -38,7 +39,7 @@
     "tailwindcss": "^3.3.6",
     "typescript": "~5.3.3",
     "vite": "^5.0.8",
-    "vue-tsc": "^1.8.25"
+    "vue-tsc": "^2.1.6"
   },
   "engines": {
     "node": ">=18.0.0"
