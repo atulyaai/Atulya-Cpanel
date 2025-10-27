@@ -116,10 +116,10 @@
     "ROADMAP.md",
     "TESTING.md",
     "DEVELOPMENT_GUIDE.md",
-    "GITHUB_ISSUES.md",
-    "REPOSITORY_SETTINGS.md",
+    "INSTALLATION_GUIDE.md",
     "setup-dev.sh",
-    "setup-dev.bat"
+    "setup-dev.bat",
+    "install.sh"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
