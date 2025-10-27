@@ -79,8 +79,6 @@ export class WebSocketService {
     const clientId = socket.id;
     this.connectedClients.add(clientId);
 
-    console.log(`Client connected: ${clientId}`);
-
     // Handle client events
     socket.on('subscribe-system', () => this.subscribeToSystem(clientId, socket));
     socket.on('subscribe-sites', () => this.subscribeToSites(clientId, socket));
@@ -114,16 +112,13 @@ export class WebSocketService {
       subscription.delete(clientId);
     }
 
-    console.log(`Client disconnected: ${clientId}`);
-  }
+    }
 
   /**
    * Subscribe to system metrics
    */
   private subscribeToSystem(clientId: string, socket: any): void {
     this.subscriptions.get('system')?.add(clientId);
-    console.log(`Client ${clientId} subscribed to system metrics`);
-    
     // Send current system metrics immediately
     this.sendSystemMetrics(socket);
   }
@@ -133,8 +128,6 @@ export class WebSocketService {
    */
   private subscribeToSites(clientId: string, socket: any): void {
     this.subscriptions.get('sites')?.add(clientId);
-    console.log(`Client ${clientId} subscribed to site metrics`);
-    
     // Send current site metrics immediately
     this.sendSiteMetrics(socket);
   }
@@ -144,8 +137,6 @@ export class WebSocketService {
    */
   private subscribeToDatabases(clientId: string, socket: any): void {
     this.subscriptions.get('databases')?.add(clientId);
-    console.log(`Client ${clientId} subscribed to database metrics`);
-    
     // Send current database metrics immediately
     this.sendDatabaseMetrics(socket);
   }
@@ -155,8 +146,6 @@ export class WebSocketService {
    */
   private subscribeToEmail(clientId: string, socket: any): void {
     this.subscriptions.get('email')?.add(clientId);
-    console.log(`Client ${clientId} subscribed to email metrics`);
-    
     // Send current email metrics immediately
     this.sendEmailMetrics(socket);
   }
@@ -166,8 +155,6 @@ export class WebSocketService {
    */
   private subscribeToAlerts(clientId: string, socket: any): void {
     this.subscriptions.get('alerts')?.add(clientId);
-    console.log(`Client ${clientId} subscribed to alerts`);
-    
     // Send current alerts immediately
     this.sendAlerts(socket);
   }
@@ -177,40 +164,35 @@ export class WebSocketService {
    */
   private unsubscribeFromSystem(clientId: string): void {
     this.subscriptions.get('system')?.delete(clientId);
-    console.log(`Client ${clientId} unsubscribed from system metrics`);
-  }
+    }
 
   /**
    * Unsubscribe from site metrics
    */
   private unsubscribeFromSites(clientId: string): void {
     this.subscriptions.get('sites')?.delete(clientId);
-    console.log(`Client ${clientId} unsubscribed from site metrics`);
-  }
+    }
 
   /**
    * Unsubscribe from database metrics
    */
   private unsubscribeFromDatabases(clientId: string): void {
     this.subscriptions.get('databases')?.delete(clientId);
-    console.log(`Client ${clientId} unsubscribed from database metrics`);
-  }
+    }
 
   /**
    * Unsubscribe from email metrics
    */
   private unsubscribeFromEmail(clientId: string): void {
     this.subscriptions.get('email')?.delete(clientId);
-    console.log(`Client ${clientId} unsubscribed from email metrics`);
-  }
+    }
 
   /**
    * Unsubscribe from alerts
    */
   private unsubscribeFromAlerts(clientId: string): void {
     this.subscriptions.get('alerts')?.delete(clientId);
-    console.log(`Client ${clientId} unsubscribed from alerts`);
-  }
+    }
 
   /**
    * Send initial data to newly connected client
@@ -239,8 +221,7 @@ export class WebSocketService {
       await this.updateAllMetrics();
     }, 5000);
 
-    console.log('Started monitoring updates');
-  }
+    }
 
   /**
    * Update all metrics and broadcast to subscribed clients

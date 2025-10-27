@@ -587,9 +587,7 @@ ${options.html || options.text}`;
       // Clean up temp file
       await fs.promises.unlink(tempFile);
       
-      console.log(`Email sent to ${options.to}`);
-    } catch (error) {
-      console.error('Failed to send email:', error);
+      } catch (error) {
       throw error;
     }
   }

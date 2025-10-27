@@ -2,11 +2,18 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Databases</h1>
-        <p class="text-gray-600">Manage MySQL/MariaDB databases</p>
+        <h1 class="text-2xl font-bold text-gray-900">
+          Databases
+        </h1>
+        <p class="text-gray-600">
+          Manage MySQL/MariaDB databases
+        </p>
       </div>
-      <button @click="showCreateModal = true" class="btn-primary">
-        <i class="pi pi-plus mr-2"></i>
+      <button
+        class="btn-primary"
+        @click="showCreateModal = true"
+      >
+        <i class="pi pi-plus mr-2" />
         Create Database
       </button>
     </div>
@@ -16,11 +23,15 @@
       <div class="card">
         <div class="flex items-center">
           <div class="p-3 bg-blue-100 rounded-lg">
-            <i class="pi pi-database text-blue-600 text-xl"></i>
+            <i class="pi pi-database text-blue-600 text-xl" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Total Databases</p>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.totalDatabases }}</p>
+            <p class="text-sm font-medium text-gray-600">
+              Total Databases
+            </p>
+            <p class="text-2xl font-bold text-gray-900">
+              {{ stats.totalDatabases }}
+            </p>
           </div>
         </div>
       </div>
@@ -28,11 +39,15 @@
       <div class="card">
         <div class="flex items-center">
           <div class="p-3 bg-green-100 rounded-lg">
-            <i class="pi pi-check-circle text-green-600 text-xl"></i>
+            <i class="pi pi-check-circle text-green-600 text-xl" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Active</p>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.activeDatabases }}</p>
+            <p class="text-sm font-medium text-gray-600">
+              Active
+            </p>
+            <p class="text-2xl font-bold text-gray-900">
+              {{ stats.activeDatabases }}
+            </p>
           </div>
         </div>
       </div>
@@ -40,11 +55,15 @@
       <div class="card">
         <div class="flex items-center">
           <div class="p-3 bg-purple-100 rounded-lg">
-            <i class="pi pi-chart-bar text-purple-600 text-xl"></i>
+            <i class="pi pi-chart-bar text-purple-600 text-xl" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Total Size</p>
-            <p class="text-2xl font-bold text-gray-900">{{ formatBytes(stats.totalSize) }}</p>
+            <p class="text-sm font-medium text-gray-600">
+              Total Size
+            </p>
+            <p class="text-2xl font-bold text-gray-900">
+              {{ formatBytes(stats.totalSize) }}
+            </p>
           </div>
         </div>
       </div>
@@ -53,31 +72,54 @@
     <!-- Databases Table -->
     <div class="card">
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-semibold text-gray-900">Your Databases</h3>
+        <h3 class="text-lg font-semibold text-gray-900">
+          Your Databases
+        </h3>
         <div class="flex items-center space-x-4">
-          <button @click="refreshDatabases" class="btn-secondary">
-            <i class="pi pi-refresh mr-2"></i>
+          <button
+            class="btn-secondary"
+            @click="refreshDatabases"
+          >
+            <i class="pi pi-refresh mr-2" />
             Refresh
           </button>
         </div>
       </div>
 
-      <div v-if="loading" class="text-center py-8">
-        <i class="pi pi-spin pi-spinner text-2xl text-gray-400"></i>
-        <p class="text-gray-500 mt-2">Loading databases...</p>
+      <div
+        v-if="loading"
+        class="text-center py-8"
+      >
+        <i class="pi pi-spin pi-spinner text-2xl text-gray-400" />
+        <p class="text-gray-500 mt-2">
+          Loading databases...
+        </p>
       </div>
 
-      <div v-else-if="databases.length === 0" class="text-center py-12">
-        <i class="pi pi-database text-6xl text-gray-300 mb-4"></i>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No databases yet</h3>
-        <p class="text-gray-500 mb-6">Create your first database to get started</p>
-        <button @click="showCreateModal = true" class="btn-primary">
-          <i class="pi pi-plus mr-2"></i>
+      <div
+        v-else-if="databases.length === 0"
+        class="text-center py-12"
+      >
+        <i class="pi pi-database text-6xl text-gray-300 mb-4" />
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          No databases yet
+        </h3>
+        <p class="text-gray-500 mb-6">
+          Create your first database to get started
+        </p>
+        <button
+          class="btn-primary"
+          @click="showCreateModal = true"
+        >
+          <i class="pi pi-plus mr-2" />
           Create Database
         </button>
       </div>
 
-      <div v-else class="overflow-x-auto">
+      <div
+        v-else
+        class="overflow-x-auto"
+      >
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -102,21 +144,32 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="database in databases" :key="database.id">
+            <tr
+              v-for="database in databases"
+              :key="database.id"
+            >
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
-                  <i class="pi pi-database text-gray-400 mr-3"></i>
+                  <i class="pi pi-database text-gray-400 mr-3" />
                   <div>
-                    <div class="text-sm font-medium text-gray-900">{{ database.name }}</div>
-                    <div class="text-sm text-gray-500">{{ database.id }}</div>
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ database.name }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                      {{ database.id }}
+                    </div>
                   </div>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">{{ database.username }}</div>
+                <div class="text-sm text-gray-900">
+                  {{ database.username }}
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">{{ formatBytes(Number(database.size)) }}</div>
+                <div class="text-sm text-gray-900">
+                  {{ formatBytes(Number(database.size)) }}
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-900">
@@ -130,14 +183,23 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div class="flex items-center space-x-2">
-                  <button @click="viewDatabase(database)" class="text-primary-600 hover:text-primary-900">
-                    <i class="pi pi-eye"></i>
+                  <button
+                    class="text-primary-600 hover:text-primary-900"
+                    @click="viewDatabase(database)"
+                  >
+                    <i class="pi pi-eye" />
                   </button>
-                  <button @click="editDatabase(database)" class="text-gray-600 hover:text-gray-900">
-                    <i class="pi pi-pencil"></i>
+                  <button
+                    class="text-gray-600 hover:text-gray-900"
+                    @click="editDatabase(database)"
+                  >
+                    <i class="pi pi-pencil" />
                   </button>
-                  <button @click="deleteDatabase(database)" class="text-red-600 hover:text-red-900">
-                    <i class="pi pi-trash"></i>
+                  <button
+                    class="text-red-600 hover:text-red-900"
+                    @click="deleteDatabase(database)"
+                  >
+                    <i class="pi pi-trash" />
                   </button>
                 </div>
               </td>
@@ -148,8 +210,16 @@
     </div>
 
     <!-- Create Database Modal -->
-    <Dialog v-model:visible="showCreateModal" modal header="Create Database" :style="{ width: '500px' }">
-      <form @submit.prevent="createDatabase" class="space-y-4">
+    <Dialog
+      v-model:visible="showCreateModal"
+      modal
+      header="Create Database"
+      :style="{ width: '500px' }"
+    >
+      <form
+        class="space-y-4"
+        @submit.prevent="createDatabase"
+      >
         <div>
           <label class="label">Database Name</label>
           <input
@@ -158,8 +228,10 @@
             class="input"
             placeholder="Enter database name"
             required
-          />
-          <p class="text-xs text-gray-500 mt-1">Only alphanumeric characters and underscores allowed</p>
+          >
+          <p class="text-xs text-gray-500 mt-1">
+            Only alphanumeric characters and underscores allowed
+          </p>
         </div>
 
         <div>
@@ -169,7 +241,7 @@
             type="text"
             class="input"
             placeholder="Auto-generated if empty"
-          />
+          >
         </div>
 
         <div>
@@ -179,15 +251,26 @@
             type="password"
             class="input"
             placeholder="Auto-generated if empty"
-          />
+          >
         </div>
 
         <div class="flex justify-end space-x-3 pt-4">
-          <button type="button" @click="showCreateModal = false" class="btn-secondary">
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="showCreateModal = false"
+          >
             Cancel
           </button>
-          <button type="submit" :disabled="loading" class="btn-primary">
-            <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
+          <button
+            type="submit"
+            :disabled="loading"
+            class="btn-primary"
+          >
+            <i
+              v-if="loading"
+              class="pi pi-spin pi-spinner mr-2"
+            />
             Create Database
           </button>
         </div>
@@ -195,17 +278,28 @@
     </Dialog>
 
     <!-- View Database Modal -->
-    <Dialog v-model:visible="showViewModal" modal header="Database Viewer" :style="{ width: '800px' }">
-      <div v-if="selectedDatabase" class="space-y-6">
+    <Dialog
+      v-model:visible="showViewModal"
+      modal
+      header="Database Viewer"
+      :style="{ width: '800px' }"
+    >
+      <div
+        v-if="selectedDatabase"
+        class="space-y-6"
+      >
         <!-- Database Info -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <h4 class="font-semibold text-gray-900 mb-2">Database Information</h4>
+            <h4 class="font-semibold text-gray-900 mb-2">
+              Database Information
+            </h4>
             <div class="space-y-2 text-sm">
               <div><span class="font-medium">Name:</span> {{ selectedDatabase.name }}</div>
               <div><span class="font-medium">Username:</span> {{ selectedDatabase.username || 'N/A' }}</div>
               <div><span class="font-medium">Size:</span> {{ formatBytes(Number(selectedDatabase.size)) }}</div>
-              <div><span class="font-medium">Status:</span> 
+              <div>
+                <span class="font-medium">Status:</span> 
                 <span :class="selectedDatabase.isActive ? 'text-green-600' : 'text-red-600'">
                   {{ selectedDatabase.isActive ? 'Active' : 'Inactive' }}
                 </span>
@@ -213,7 +307,9 @@
             </div>
           </div>
           <div v-if="databaseInfo">
-            <h4 class="font-semibold text-gray-900 mb-2">Additional Info</h4>
+            <h4 class="font-semibold text-gray-900 mb-2">
+              Additional Info
+            </h4>
             <div class="space-y-2 text-sm">
               <div><span class="font-medium">Tables:</span> {{ databaseInfo.tableCount || 0 }}</div>
               <div><span class="font-medium">Created:</span> {{ formatDate(databaseInfo.createdAt) }}</div>
@@ -223,9 +319,15 @@
 
         <!-- Tables List -->
         <div v-if="databaseTables.length > 0">
-          <h4 class="font-semibold text-gray-900 mb-2">Tables</h4>
+          <h4 class="font-semibold text-gray-900 mb-2">
+            Tables
+          </h4>
           <div class="grid grid-cols-3 gap-2">
-            <div v-for="table in databaseTables" :key="table" class="p-2 bg-gray-100 rounded text-sm">
+            <div
+              v-for="table in databaseTables"
+              :key="table"
+              class="p-2 bg-gray-100 rounded text-sm"
+            >
               {{ Object.values(table)[0] }}
             </div>
           </div>
@@ -233,24 +335,34 @@
 
         <!-- Query Interface -->
         <div>
-          <h4 class="font-semibold text-gray-900 mb-2">SQL Query</h4>
+          <h4 class="font-semibold text-gray-900 mb-2">
+            SQL Query
+          </h4>
           <div class="space-y-3">
             <textarea
               v-model="queryText"
               class="w-full p-3 border border-gray-300 rounded-md font-mono text-sm"
               rows="4"
               placeholder="Enter SQL query here..."
-            ></textarea>
-            <button @click="executeQuery" class="btn-primary">
-              <i class="pi pi-play mr-2"></i>
+            />
+            <button
+              class="btn-primary"
+              @click="executeQuery"
+            >
+              <i class="pi pi-play mr-2" />
               Execute Query
             </button>
           </div>
         </div>
 
         <!-- Query Results -->
-        <div v-if="queryResult" class="mt-4">
-          <h4 class="font-semibold text-gray-900 mb-2">Query Results</h4>
+        <div
+          v-if="queryResult"
+          class="mt-4"
+        >
+          <h4 class="font-semibold text-gray-900 mb-2">
+            Query Results
+          </h4>
           <div class="bg-gray-50 p-4 rounded-md overflow-x-auto">
             <pre class="text-sm">{{ JSON.stringify(queryResult, null, 2) }}</pre>
           </div>
@@ -259,8 +371,16 @@
     </Dialog>
 
     <!-- Edit Database Modal -->
-    <Dialog v-model:visible="showEditModal" modal header="Edit Database" :style="{ width: '500px' }">
-      <form @submit.prevent="updateDatabase" class="space-y-4">
+    <Dialog
+      v-model:visible="showEditModal"
+      modal
+      header="Edit Database"
+      :style="{ width: '500px' }"
+    >
+      <form
+        class="space-y-4"
+        @submit.prevent="updateDatabase"
+      >
         <div>
           <label class="label">Database Name</label>
           <input
@@ -269,7 +389,7 @@
             class="input"
             placeholder="Enter database name"
             required
-          />
+          >
         </div>
 
         <div>
@@ -279,7 +399,7 @@
             type="text"
             class="input"
             placeholder="Enter username"
-          />
+          >
         </div>
 
         <div>
@@ -289,15 +409,26 @@
             type="password"
             class="input"
             placeholder="Enter new password"
-          />
+          >
         </div>
 
         <div class="flex justify-end space-x-3 pt-4">
-          <button type="button" @click="showEditModal = false" class="btn-secondary">
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="showEditModal = false"
+          >
             Cancel
           </button>
-          <button type="submit" :disabled="loading" class="btn-primary">
-            <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
+          <button
+            type="submit"
+            :disabled="loading"
+            class="btn-primary"
+          >
+            <i
+              v-if="loading"
+              class="pi pi-spin pi-spinner mr-2"
+            />
             Update Database
           </button>
         </div>
@@ -367,7 +498,7 @@ async function loadStats() {
       stats.value = response.data.data;
     }
   } catch (error) {
-    console.error('Failed to load stats:', error);
+    // Error loading database stats
   }
 }
 

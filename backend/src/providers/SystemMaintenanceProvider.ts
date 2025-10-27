@@ -1078,7 +1078,7 @@ export class SystemMaintenanceProvider {
           const result = await this.runTask(task.id);
           results.push(result);
         } catch (error) {
-          console.error(`Failed to run task ${task.id}:`, error);
+          
         }
       }
       

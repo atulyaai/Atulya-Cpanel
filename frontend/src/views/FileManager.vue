@@ -3,16 +3,26 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">File Manager</h1>
-        <p class="text-gray-600">Manage your files and directories</p>
+        <h1 class="text-2xl font-bold text-gray-900">
+          File Manager
+        </h1>
+        <p class="text-gray-600">
+          Manage your files and directories
+        </p>
       </div>
       <div class="flex items-center space-x-3">
-        <button @click="showUploadModal = true" class="btn-secondary">
-          <i class="pi pi-upload mr-2"></i>
+        <button
+          class="btn-secondary"
+          @click="showUploadModal = true"
+        >
+          <i class="pi pi-upload mr-2" />
           Upload
         </button>
-        <button @click="createNewFolder" class="btn-primary">
-          <i class="pi pi-plus mr-2"></i>
+        <button
+          class="btn-primary"
+          @click="createNewFolder"
+        >
+          <i class="pi pi-plus mr-2" />
           New Folder
         </button>
       </div>
@@ -24,8 +34,11 @@
         <div class="flex items-center space-x-4">
           <!-- Breadcrumb -->
           <nav class="flex items-center space-x-2">
-            <button @click="navigateToPath('/')" class="text-gray-500 hover:text-gray-700">
-              <i class="pi pi-home"></i>
+            <button
+              class="text-gray-500 hover:text-gray-700"
+              @click="navigateToPath('/')"
+            >
+              <i class="pi pi-home" />
             </button>
             <span class="text-gray-400">/</span>
             <span 
@@ -34,12 +47,15 @@
               class="flex items-center space-x-2"
             >
               <button 
-                @click="navigateToPath(getPathUpTo(index))"
                 class="text-gray-500 hover:text-gray-700"
+                @click="navigateToPath(getPathUpTo(index))"
               >
                 {{ segment }}
               </button>
-              <span v-if="index < pathSegments.length - 1" class="text-gray-400">/</span>
+              <span
+                v-if="index < pathSegments.length - 1"
+                class="text-gray-400"
+              >/</span>
             </span>
           </nav>
         </div>
@@ -48,35 +64,41 @@
           <!-- View mode toggle -->
           <div class="flex items-center space-x-2">
             <button 
-              @click="viewMode = 'grid'"
               :class="viewMode === 'grid' ? 'text-primary-600' : 'text-gray-400'"
               class="p-2 hover:bg-gray-100 rounded"
+              @click="viewMode = 'grid'"
             >
-              <i class="pi pi-th-large"></i>
+              <i class="pi pi-th-large" />
             </button>
             <button 
-              @click="viewMode = 'list'"
               :class="viewMode === 'list' ? 'text-primary-600' : 'text-gray-400'"
               class="p-2 hover:bg-gray-100 rounded"
+              @click="viewMode = 'list'"
             >
-              <i class="pi pi-list"></i>
+              <i class="pi pi-list" />
             </button>
           </div>
           
           <!-- Show hidden files toggle -->
           <div class="flex items-center space-x-2">
             <input 
+              id="showHidden" 
               v-model="showHidden" 
-              type="checkbox" 
-              id="showHidden"
+              type="checkbox"
               class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <label for="showHidden" class="text-sm text-gray-600">Show hidden</label>
+            >
+            <label
+              for="showHidden"
+              class="text-sm text-gray-600"
+            >Show hidden</label>
           </div>
           
           <!-- Refresh button -->
-          <button @click="refreshDirectory" class="btn-secondary btn-sm">
-            <i class="pi pi-refresh mr-1"></i>
+          <button
+            class="btn-secondary btn-sm"
+            @click="refreshDirectory"
+          >
+            <i class="pi pi-refresh mr-1" />
             Refresh
           </button>
         </div>
@@ -85,20 +107,36 @@
 
     <!-- File browser -->
     <div class="card">
-      <div v-if="loading" class="p-8 text-center">
-        <i class="pi pi-spin pi-spinner text-2xl text-gray-400"></i>
-        <p class="text-gray-500 mt-2">Loading directory...</p>
+      <div
+        v-if="loading"
+        class="p-8 text-center"
+      >
+        <i class="pi pi-spin pi-spinner text-2xl text-gray-400" />
+        <p class="text-gray-500 mt-2">
+          Loading directory...
+        </p>
       </div>
 
-      <div v-else-if="error" class="p-8 text-center">
-        <i class="pi pi-exclamation-triangle text-2xl text-red-400 mb-2"></i>
-        <p class="text-red-600">{{ error }}</p>
-        <button @click="refreshDirectory" class="btn-secondary mt-4">
+      <div
+        v-else-if="error"
+        class="p-8 text-center"
+      >
+        <i class="pi pi-exclamation-triangle text-2xl text-red-400 mb-2" />
+        <p class="text-red-600">
+          {{ error }}
+        </p>
+        <button
+          class="btn-secondary mt-4"
+          @click="refreshDirectory"
+        >
           Try Again
         </button>
       </div>
 
-      <div v-else-if="directoryInfo" class="p-4">
+      <div
+        v-else-if="directoryInfo"
+        class="p-4"
+      >
         <!-- Directory stats -->
         <div class="mb-4 text-sm text-gray-600">
           {{ directoryInfo.totalFiles }} files, {{ directoryInfo.totalDirectories }} folders
@@ -108,20 +146,29 @@
         </div>
 
         <!-- Grid view -->
-        <div v-if="viewMode === 'grid'" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div
+          v-if="viewMode === 'grid'"
+          class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+        >
           <div 
             v-for="file in directoryInfo.files" 
             :key="file.path"
-            @click="handleFileClick(file)"
-            @dblclick="handleFileDoubleClick(file)"
             class="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
             :class="{ 'bg-blue-50 border-blue-200': selectedFiles.includes(file.path) }"
+            @click="handleFileClick(file)"
+            @dblclick="handleFileDoubleClick(file)"
           >
             <div class="text-center">
               <div class="text-3xl mb-2">
-                <i :class="getFileIcon(file)" class="text-gray-600"></i>
+                <i
+                  :class="getFileIcon(file)"
+                  class="text-gray-600"
+                />
               </div>
-              <div class="text-sm font-medium text-gray-900 truncate" :title="file.name">
+              <div
+                class="text-sm font-medium text-gray-900 truncate"
+                :title="file.name"
+              >
                 {{ file.name }}
               </div>
               <div class="text-xs text-gray-500 mt-1">
@@ -135,7 +182,10 @@
         </div>
 
         <!-- List view -->
-        <div v-else class="overflow-x-auto">
+        <div
+          v-else
+          class="overflow-x-auto"
+        >
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -143,9 +193,9 @@
                   <input 
                     type="checkbox" 
                     :checked="selectedFiles.length === directoryInfo.files.length"
-                    @change="toggleSelectAll"
                     class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
+                    @change="toggleSelectAll"
+                  >
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Name
@@ -175,16 +225,23 @@
                   <input 
                     type="checkbox" 
                     :checked="selectedFiles.includes(file.path)"
-                    @change="toggleFileSelection(file.path)"
                     class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
+                    @change="toggleFileSelection(file.path)"
+                  >
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
-                    <i :class="getFileIcon(file)" class="text-gray-400 mr-3"></i>
+                    <i
+                      :class="getFileIcon(file)"
+                      class="text-gray-400 mr-3"
+                    />
                     <div>
-                      <div class="text-sm font-medium text-gray-900">{{ file.name }}</div>
-                      <div class="text-sm text-gray-500">{{ file.owner }}:{{ file.group }}</div>
+                      <div class="text-sm font-medium text-gray-900">
+                        {{ file.name }}
+                      </div>
+                      <div class="text-sm text-gray-500">
+                        {{ file.owner }}:{{ file.group }}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -200,25 +257,25 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex items-center space-x-2">
                     <button 
-                      @click="handleFileClick(file)"
                       class="text-primary-600 hover:text-primary-900"
                       title="View/Edit"
+                      @click="handleFileClick(file)"
                     >
-                      <i class="pi pi-eye"></i>
+                      <i class="pi pi-eye" />
                     </button>
                     <button 
-                      @click="renameFile(file)"
                       class="text-gray-600 hover:text-gray-900"
                       title="Rename"
+                      @click="renameFile(file)"
                     >
-                      <i class="pi pi-pencil"></i>
+                      <i class="pi pi-pencil" />
                     </button>
                     <button 
-                      @click="deleteFile(file)"
                       class="text-red-600 hover:text-red-900"
                       title="Delete"
+                      @click="deleteFile(file)"
                     >
-                      <i class="pi pi-trash"></i>
+                      <i class="pi pi-trash" />
                     </button>
                   </div>
                 </td>
@@ -230,17 +287,33 @@
     </div>
 
     <!-- File Editor Modal -->
-    <Dialog v-model:visible="showEditorModal" modal header="File Editor" :style="{ width: '90vw', height: '80vh' }">
-      <div v-if="editorFile" class="h-full flex flex-col">
+    <Dialog
+      v-model:visible="showEditorModal"
+      modal
+      header="File Editor"
+      :style="{ width: '90vw', height: '80vh' }"
+    >
+      <div
+        v-if="editorFile"
+        class="h-full flex flex-col"
+      >
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h3 class="text-lg font-semibold">{{ editorFile.name }}</h3>
-            <p class="text-sm text-gray-500">{{ editorFile.path }}</p>
+            <h3 class="text-lg font-semibold">
+              {{ editorFile.name }}
+            </h3>
+            <p class="text-sm text-gray-500">
+              {{ editorFile.path }}
+            </p>
           </div>
           <div class="flex items-center space-x-2">
             <span class="text-sm text-gray-500">{{ editorFile.type }}</span>
-            <button @click="saveFile" :disabled="!hasChanges" class="btn-primary btn-sm">
-              <i class="pi pi-save mr-1"></i>
+            <button
+              :disabled="!hasChanges"
+              class="btn-primary btn-sm"
+              @click="saveFile"
+            >
+              <i class="pi pi-save mr-1" />
               Save
             </button>
           </div>
@@ -251,33 +324,48 @@
             v-model="editorContent"
             :language="getFileLanguage(editorFile.name)"
             :options="editorOptions"
-            @change="onEditorChange"
             class="h-full"
+            @change="onEditorChange"
           />
         </div>
       </div>
     </Dialog>
 
     <!-- Upload Modal -->
-    <Dialog v-model:visible="showUploadModal" modal header="Upload Files" :style="{ width: '500px' }">
+    <Dialog
+      v-model:visible="showUploadModal"
+      modal
+      header="Upload Files"
+      :style="{ width: '500px' }"
+    >
       <div class="space-y-4">
         <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <i class="pi pi-cloud-upload text-4xl text-gray-400 mb-4"></i>
-          <p class="text-gray-600 mb-4">Drag and drop files here or click to browse</p>
+          <i class="pi pi-cloud-upload text-4xl text-gray-400 mb-4" />
+          <p class="text-gray-600 mb-4">
+            Drag and drop files here or click to browse
+          </p>
           <input 
             ref="fileInput"
             type="file" 
             multiple 
-            @change="handleFileUpload"
             class="hidden"
-          />
-          <button @click="$refs.fileInput.click()" class="btn-primary">
+            @change="handleFileUpload"
+          >
+          <button
+            class="btn-primary"
+            @click="$refs.fileInput.click()"
+          >
             Choose Files
           </button>
         </div>
         
-        <div v-if="uploadFiles.length > 0" class="space-y-2">
-          <h4 class="font-medium text-gray-900">Files to upload:</h4>
+        <div
+          v-if="uploadFiles.length > 0"
+          class="space-y-2"
+        >
+          <h4 class="font-medium text-gray-900">
+            Files to upload:
+          </h4>
           <div class="space-y-1">
             <div 
               v-for="file in uploadFiles" 
@@ -291,11 +379,18 @@
         </div>
         
         <div class="flex justify-end space-x-3 pt-4">
-          <button @click="showUploadModal = false" class="btn-secondary">
+          <button
+            class="btn-secondary"
+            @click="showUploadModal = false"
+          >
             Cancel
           </button>
-          <button @click="uploadFilesToServer" :disabled="uploadFiles.length === 0" class="btn-primary">
-            <i class="pi pi-upload mr-2"></i>
+          <button
+            :disabled="uploadFiles.length === 0"
+            class="btn-primary"
+            @click="uploadFilesToServer"
+          >
+            <i class="pi pi-upload mr-2" />
             Upload {{ uploadFiles.length }} files
           </button>
         </div>
@@ -303,7 +398,12 @@
     </Dialog>
 
     <!-- Create Folder Modal -->
-    <Dialog v-model:visible="showCreateFolderModal" modal header="Create New Folder" :style="{ width: '400px' }">
+    <Dialog
+      v-model:visible="showCreateFolderModal"
+      modal
+      header="Create New Folder"
+      :style="{ width: '400px' }"
+    >
       <div class="space-y-4">
         <div>
           <label class="label">Folder Name</label>
@@ -313,14 +413,21 @@
             class="input"
             placeholder="Enter folder name"
             @keyup.enter="createFolder"
-          />
+          >
         </div>
         
         <div class="flex justify-end space-x-3 pt-4">
-          <button @click="showCreateFolderModal = false" class="btn-secondary">
+          <button
+            class="btn-secondary"
+            @click="showCreateFolderModal = false"
+          >
             Cancel
           </button>
-          <button @click="createFolder" :disabled="!newFolderName.trim()" class="btn-primary">
+          <button
+            :disabled="!newFolderName.trim()"
+            class="btn-primary"
+            @click="createFolder"
+          >
             Create Folder
           </button>
         </div>

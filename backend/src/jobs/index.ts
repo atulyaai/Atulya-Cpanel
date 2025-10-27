@@ -50,8 +50,6 @@ export class JobManager {
    * Initialize and start all background jobs
    */
   async setupJobs(): Promise<void> {
-    console.log('🚀 Setting up background jobs system...');
-
     // System maintenance jobs
     await this.registerJob({
       name: 'system-cleanup',
@@ -165,22 +163,18 @@ export class JobManager {
       priority: 'low'
     }, this.oldBackupCleanup.bind(this));
 
-    console.log(`✅ Registered ${this.jobs.size} background jobs`);
-  }
+    }
 
   /**
    * Register a new job
    */
   async registerJob(config: JobConfig, handler: () => Promise<void>): Promise<void> {
     if (!config.enabled) {
-      console.log(`⏸️ Job ${config.name} is disabled`);
       return;
     }
 
     const task = cron.schedule(config.schedule, async () => {
       const startTime = Date.now();
-      console.log(`🔄 Starting job: ${config.name}`);
-      
       try {
         await handler();
         const duration = Date.now() - startTime;
@@ -192,9 +186,7 @@ export class JobManager {
         };
         
         this.addJobHistory(config.name, result);
-        console.log(`✅ Job ${config.name} completed in ${duration}ms`);
-        
-      } catch (error) {
+        } catch (error) {
         const duration = Date.now() - startTime;
         const result: JobResult = {
           success: false,
@@ -225,8 +217,6 @@ export class JobManager {
    * System cleanup job
    */
   private async systemCleanup(): Promise<void> {
-    console.log('🧹 Running system cleanup...');
-    
     // Clean temporary files
     await execAsync('find /tmp -type f -atime +7 -delete');
     await execAsync('find /var/tmp -type f -atime +7 -delete');
@@ -246,33 +236,26 @@ export class JobManager {
     try {
       await this.databaseProvider.optimizeDatabases();
     } catch (error) {
-      console.warn('Database optimization failed:', error);
-    }
+      }
     
-    console.log('✅ System cleanup completed');
-  }
+    }
 
   /**
    * Log rotation job
    */
   private async logRotation(): Promise<void> {
-    console.log('📄 Running log rotation...');
-    
     // Rotate application logs
     await execAsync('logrotate -f /etc/logrotate.conf');
     
     // Compress old logs
     await execAsync('find /var/log -name "*.log" -type f -mtime +1 -exec gzip {} \\;');
     
-    console.log('✅ Log rotation completed');
-  }
+    }
 
   /**
    * System updates job
    */
   private async systemUpdates(): Promise<void> {
-    console.log('🔄 Checking for system updates...');
-    
     try {
       // Update package lists
       await execAsync('apt-get update');
@@ -282,8 +265,6 @@ export class JobManager {
       const updateCount = parseInt(stdout.trim());
       
       if (updateCount > 0) {
-        console.log(`📦 Found ${updateCount} updates available`);
-        
         // Apply security updates only (safer for production)
         await execAsync('apt-get upgrade -y --only-upgrade');
         
@@ -291,12 +272,9 @@ export class JobManager {
         await execAsync('apt-get autoremove -y');
         await execAsync('apt-get autoclean');
         
-        console.log('✅ System updates applied');
-      } else {
-        console.log('✅ System is up to date');
-      }
+        } else {
+        }
     } catch (error) {
-      console.error('❌ System update failed:', error);
       throw error;
     }
   }
@@ -305,8 +283,6 @@ export class JobManager {
    * Health check job
    */
   private async healthCheck(): Promise<void> {
-    console.log('🏥 Running health check...');
-    
     const healthStatus: {
       timestamp: Date;
       services: Record<string, any>;
@@ -391,11 +367,10 @@ export class JobManager {
         const isActive = stdout.trim() === 'active';
         
         if (!isActive) {
-          console.warn(`⚠️ Service ${service} is not active, attempting restart...`);
           await execAsync(`systemctl restart ${service}`);
         }
       } catch (error) {
-        console.error(`❌ Failed to check/restart service ${service}:`, error);
+        
       }
     }
   }
@@ -404,17 +379,13 @@ export class JobManager {
    * Database backup job
    */
   private async databaseBackup(): Promise<void> {
-    console.log('💾 Running database backup...');
     await this.databaseProvider.createBackup();
-    console.log('✅ Database backup completed');
-  }
+    }
 
   /**
    * File backup job
    */
   private async fileBackup(): Promise<void> {
-    console.log('📁 Running file backup...');
-    
     const backupDir = '/var/backups/atulya-panel';
     await fs.ensureDir(backupDir);
     
@@ -424,55 +395,43 @@ export class JobManager {
     // Backup important directories
     await execAsync(`tar -czf ${backupPath} /etc/nginx /etc/apache2 /var/www /etc/ssl`);
     
-    console.log('✅ File backup completed');
-  }
+    }
 
   /**
    * Security scan job
    */
   private async securityScan(): Promise<void> {
-    console.log('🔒 Running security scan...');
-    
     // Check for failed login attempts
     const { stdout } = await execAsync('grep "Failed password" /var/log/auth.log | wc -l');
     const failedLogins = parseInt(stdout.trim());
     
     if (failedLogins > 100) {
-      console.warn(`⚠️ High number of failed login attempts: ${failedLogins}`);
-    }
+      }
     
     // Check for suspicious processes
     const { stdout: processes } = await execAsync('ps aux | grep -E "(nc|netcat|nmap|masscan)" | grep -v grep | wc -l');
     const suspiciousProcesses = parseInt(processes.trim());
     
     if (suspiciousProcesses > 0) {
-      console.warn(`⚠️ Suspicious processes detected: ${suspiciousProcesses}`);
-    }
+      }
     
-    console.log('✅ Security scan completed');
-  }
+    }
 
   /**
    * SSL renewal job
    */
   private async sslRenewal(): Promise<void> {
-    console.log('🔐 Checking SSL certificates...');
-    
     try {
       // Check Let's Encrypt certificates
       await execAsync('certbot renew --dry-run');
-      console.log('✅ SSL certificates are up to date');
-    } catch (error) {
-      console.warn('⚠️ SSL certificate renewal check failed:', error);
-    }
+      } catch (error) {
+      }
   }
 
   /**
    * Temporary cleanup job
    */
   private async tempCleanup(): Promise<void> {
-    console.log('🗑️ Cleaning temporary files...');
-    
     // Clean application temp files
     await execAsync('find /tmp -type f -atime +1 -delete');
     await execAsync('find /var/tmp -type f -atime +1 -delete');
@@ -480,20 +439,16 @@ export class JobManager {
     // Clean browser caches
     await execAsync('find /home -name ".cache" -type d -exec rm -rf {} + 2>/dev/null || true');
     
-    console.log('✅ Temporary cleanup completed');
-  }
+    }
 
   /**
    * Old backup cleanup job
    */
   private async oldBackupCleanup(): Promise<void> {
-    console.log('🗑️ Cleaning old backups...');
-    
     // Remove backups older than 30 days
     await execAsync('find /var/backups -type f -mtime +30 -delete');
     
-    console.log('✅ Old backup cleanup completed');
-  }
+    }
 
   /**
    * Add job result to history
@@ -526,7 +481,7 @@ export class JobManager {
         }
       });
     } catch (error) {
-      console.error('Failed to store health status:', error);
+      
     }
   }
 
@@ -545,7 +500,7 @@ export class JobManager {
         }
       });
     } catch (error) {
-      console.error('Failed to store metrics:', error);
+      
     }
   }
 
@@ -561,7 +516,7 @@ export class JobManager {
         html: `<h2>Job Failure Alert</h2><p>Job: ${jobName}</p><p>Error: ${error.message || error}</p><p>Time: ${new Date().toISOString()}</p>`
       });
     } catch (error) {
-      console.error('Failed to send job failure alert:', error);
+      
     }
   }
 
@@ -578,7 +533,7 @@ export class JobManager {
         html: `<h2>System Health Alert</h2><p>Issues detected:</p><ul>${healthStatus.alerts.map((alert: string) => `<li>${alert}</li>`).join('')}</ul>`
       });
     } catch (error) {
-      console.error('Failed to send health alert:', error);
+      
     }
   }
 
@@ -625,8 +580,7 @@ export class JobManager {
   stopAllJobs(): void {
     for (const [name, task] of this.jobs) {
       task.stop();
-      console.log(`⏹️ Stopped job: ${name}`);
-    }
+      }
   }
 
   /**
@@ -637,7 +591,6 @@ export class JobManager {
     if (task) {
       task.stop();
       task.start();
-      console.log(`🔄 Restarted job: ${jobName}`);
       return true;
     }
     return false;
@@ -652,5 +605,4 @@ export async function setupJobs(): Promise<void> {
   // Store job manager instance for later use
   (global as any).jobManager = jobManager;
   
-  console.log('✅ Background jobs system initialized');
-}
+  }

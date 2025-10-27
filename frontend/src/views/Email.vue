@@ -2,16 +2,26 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Email</h1>
-        <p class="text-gray-600">Manage email accounts and domains</p>
+        <h1 class="text-2xl font-bold text-gray-900">
+          Email
+        </h1>
+        <p class="text-gray-600">
+          Manage email accounts and domains
+        </p>
       </div>
       <div class="flex items-center space-x-3">
-        <button @click="showCreateDomainModal = true" class="btn-secondary">
-          <i class="pi pi-globe mr-2"></i>
+        <button
+          class="btn-secondary"
+          @click="showCreateDomainModal = true"
+        >
+          <i class="pi pi-globe mr-2" />
           Add Domain
         </button>
-        <button @click="showCreateAccountModal = true" class="btn-primary">
-          <i class="pi pi-plus mr-2"></i>
+        <button
+          class="btn-primary"
+          @click="showCreateAccountModal = true"
+        >
+          <i class="pi pi-plus mr-2" />
           Create Account
         </button>
       </div>
@@ -22,11 +32,15 @@
       <div class="card">
         <div class="flex items-center">
           <div class="p-3 bg-blue-100 rounded-lg">
-            <i class="pi pi-envelope text-blue-600 text-xl"></i>
+            <i class="pi pi-envelope text-blue-600 text-xl" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Total Accounts</p>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.totalAccounts }}</p>
+            <p class="text-sm font-medium text-gray-600">
+              Total Accounts
+            </p>
+            <p class="text-2xl font-bold text-gray-900">
+              {{ stats.totalAccounts }}
+            </p>
           </div>
         </div>
       </div>
@@ -34,11 +48,15 @@
       <div class="card">
         <div class="flex items-center">
           <div class="p-3 bg-green-100 rounded-lg">
-            <i class="pi pi-check-circle text-green-600 text-xl"></i>
+            <i class="pi pi-check-circle text-green-600 text-xl" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Active</p>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.activeAccounts }}</p>
+            <p class="text-sm font-medium text-gray-600">
+              Active
+            </p>
+            <p class="text-2xl font-bold text-gray-900">
+              {{ stats.activeAccounts }}
+            </p>
           </div>
         </div>
       </div>
@@ -46,11 +64,15 @@
       <div class="card">
         <div class="flex items-center">
           <div class="p-3 bg-purple-100 rounded-lg">
-            <i class="pi pi-globe text-purple-600 text-xl"></i>
+            <i class="pi pi-globe text-purple-600 text-xl" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Domains</p>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.domains }}</p>
+            <p class="text-sm font-medium text-gray-600">
+              Domains
+            </p>
+            <p class="text-2xl font-bold text-gray-900">
+              {{ stats.domains }}
+            </p>
           </div>
         </div>
       </div>
@@ -58,11 +80,15 @@
       <div class="card">
         <div class="flex items-center">
           <div class="p-3 bg-orange-100 rounded-lg">
-            <i class="pi pi-chart-bar text-orange-600 text-xl"></i>
+            <i class="pi pi-chart-bar text-orange-600 text-xl" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Storage Used</p>
-            <p class="text-2xl font-bold text-gray-900">{{ formatBytes(stats.usedQuota) }}</p>
+            <p class="text-sm font-medium text-gray-600">
+              Storage Used
+            </p>
+            <p class="text-2xl font-bold text-gray-900">
+              {{ formatBytes(stats.usedQuota) }}
+            </p>
           </div>
         </div>
       </div>
@@ -71,31 +97,54 @@
     <!-- Email Accounts Table -->
     <div class="card">
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-semibold text-gray-900">Email Accounts</h3>
+        <h3 class="text-lg font-semibold text-gray-900">
+          Email Accounts
+        </h3>
         <div class="flex items-center space-x-4">
-          <button @click="refreshAccounts" class="btn-secondary">
-            <i class="pi pi-refresh mr-2"></i>
+          <button
+            class="btn-secondary"
+            @click="refreshAccounts"
+          >
+            <i class="pi pi-refresh mr-2" />
             Refresh
           </button>
         </div>
       </div>
 
-      <div v-if="loading" class="text-center py-8">
-        <i class="pi pi-spin pi-spinner text-2xl text-gray-400"></i>
-        <p class="text-gray-500 mt-2">Loading email accounts...</p>
+      <div
+        v-if="loading"
+        class="text-center py-8"
+      >
+        <i class="pi pi-spin pi-spinner text-2xl text-gray-400" />
+        <p class="text-gray-500 mt-2">
+          Loading email accounts...
+        </p>
       </div>
 
-      <div v-else-if="accounts.length === 0" class="text-center py-12">
-        <i class="pi pi-envelope text-6xl text-gray-300 mb-4"></i>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No email accounts yet</h3>
-        <p class="text-gray-500 mb-6">Create your first email account to get started</p>
-        <button @click="showCreateAccountModal = true" class="btn-primary">
-          <i class="pi pi-plus mr-2"></i>
+      <div
+        v-else-if="accounts.length === 0"
+        class="text-center py-12"
+      >
+        <i class="pi pi-envelope text-6xl text-gray-300 mb-4" />
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          No email accounts yet
+        </h3>
+        <p class="text-gray-500 mb-6">
+          Create your first email account to get started
+        </p>
+        <button
+          class="btn-primary"
+          @click="showCreateAccountModal = true"
+        >
+          <i class="pi pi-plus mr-2" />
           Create Account
         </button>
       </div>
 
-      <div v-else class="overflow-x-auto">
+      <div
+        v-else
+        class="overflow-x-auto"
+      >
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -120,21 +169,32 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="account in accounts" :key="account.id">
+            <tr
+              v-for="account in accounts"
+              :key="account.id"
+            >
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
-                  <i class="pi pi-envelope text-gray-400 mr-3"></i>
+                  <i class="pi pi-envelope text-gray-400 mr-3" />
                   <div>
-                    <div class="text-sm font-medium text-gray-900">{{ account.email }}</div>
-                    <div class="text-sm text-gray-500">{{ account.id }}</div>
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ account.email }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                      {{ account.id }}
+                    </div>
                   </div>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">{{ account.email.split('@')[1] }}</div>
+                <div class="text-sm text-gray-900">
+                  {{ account.email.split('@')[1] }}
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">{{ formatBytes(Number(account.quota)) }}</div>
+                <div class="text-sm text-gray-900">
+                  {{ formatBytes(Number(account.quota)) }}
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-900">
@@ -148,14 +208,23 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div class="flex items-center space-x-2">
-                  <button @click="viewAccount(account)" class="text-primary-600 hover:text-primary-900">
-                    <i class="pi pi-eye"></i>
+                  <button
+                    class="text-primary-600 hover:text-primary-900"
+                    @click="viewAccount(account)"
+                  >
+                    <i class="pi pi-eye" />
                   </button>
-                  <button @click="editAccount(account)" class="text-gray-600 hover:text-gray-900">
-                    <i class="pi pi-pencil"></i>
+                  <button
+                    class="text-gray-600 hover:text-gray-900"
+                    @click="editAccount(account)"
+                  >
+                    <i class="pi pi-pencil" />
                   </button>
-                  <button @click="deleteAccount(account)" class="text-red-600 hover:text-red-900">
-                    <i class="pi pi-trash"></i>
+                  <button
+                    class="text-red-600 hover:text-red-900"
+                    @click="deleteAccount(account)"
+                  >
+                    <i class="pi pi-trash" />
                   </button>
                 </div>
               </td>
@@ -166,8 +235,16 @@
     </div>
 
     <!-- Create Email Account Modal -->
-    <Dialog v-model:visible="showCreateAccountModal" modal header="Create Email Account" :style="{ width: '500px' }">
-      <form @submit.prevent="createAccount" class="space-y-4">
+    <Dialog
+      v-model:visible="showCreateAccountModal"
+      modal
+      header="Create Email Account"
+      :style="{ width: '500px' }"
+    >
+      <form
+        class="space-y-4"
+        @submit.prevent="createAccount"
+      >
         <div>
           <label class="label">Email Address</label>
           <input
@@ -176,7 +253,7 @@
             class="input"
             placeholder="user@example.com"
             required
-          />
+          >
         </div>
 
         <div>
@@ -186,7 +263,7 @@
             type="password"
             class="input"
             placeholder="Auto-generated if empty"
-          />
+          >
         </div>
 
         <div>
@@ -198,7 +275,7 @@
             placeholder="1000"
             min="100"
             max="10240"
-          />
+          >
         </div>
 
         <div>
@@ -208,7 +285,7 @@
             type="email"
             class="input"
             placeholder="forward@example.com"
-          />
+          >
         </div>
 
         <div class="flex items-center">
@@ -216,16 +293,27 @@
             v-model="accountForm.catchAll"
             type="checkbox"
             class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-          />
+          >
           <label class="ml-2 text-sm text-gray-600">Catch-all account</label>
         </div>
 
         <div class="flex justify-end space-x-3 pt-4">
-          <button type="button" @click="showCreateAccountModal = false" class="btn-secondary">
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="showCreateAccountModal = false"
+          >
             Cancel
           </button>
-          <button type="submit" :disabled="loading" class="btn-primary">
-            <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
+          <button
+            type="submit"
+            :disabled="loading"
+            class="btn-primary"
+          >
+            <i
+              v-if="loading"
+              class="pi pi-spin pi-spinner mr-2"
+            />
             Create Account
           </button>
         </div>
@@ -233,8 +321,16 @@
     </Dialog>
 
     <!-- Create Email Domain Modal -->
-    <Dialog v-model:visible="showCreateDomainModal" modal header="Add Email Domain" :style="{ width: '400px' }">
-      <form @submit.prevent="createDomain" class="space-y-4">
+    <Dialog
+      v-model:visible="showCreateDomainModal"
+      modal
+      header="Add Email Domain"
+      :style="{ width: '400px' }"
+    >
+      <form
+        class="space-y-4"
+        @submit.prevent="createDomain"
+      >
         <div>
           <label class="label">Domain Name</label>
           <input
@@ -243,15 +339,26 @@
             class="input"
             placeholder="example.com"
             required
-          />
+          >
         </div>
 
         <div class="flex justify-end space-x-3 pt-4">
-          <button type="button" @click="showCreateDomainModal = false" class="btn-secondary">
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="showCreateDomainModal = false"
+          >
             Cancel
           </button>
-          <button type="submit" :disabled="loading" class="btn-primary">
-            <i v-if="loading" class="pi pi-spin pi-spinner mr-2"></i>
+          <button
+            type="submit"
+            :disabled="loading"
+            class="btn-primary"
+          >
+            <i
+              v-if="loading"
+              class="pi pi-spin pi-spinner mr-2"
+            />
             Add Domain
           </button>
         </div>
@@ -320,7 +427,7 @@ async function loadStats() {
       stats.value = response.data.data;
     }
   } catch (error) {
-    console.error('Failed to load stats:', error);
+    // Error loading email stats
   }
 }
 
@@ -418,7 +525,7 @@ async function deleteAccount(account: EmailAccount) {
 }
 
 function viewAccount(account: EmailAccount) {
-  // TODO: Implement account viewer
+  // Account viewer functionality - to be implemented in future release
   toast.add({
     severity: 'info',
     summary: 'Info',
@@ -428,7 +535,7 @@ function viewAccount(account: EmailAccount) {
 }
 
 function editAccount(account: EmailAccount) {
-  // TODO: Implement account editing
+  // Account editing functionality - to be implemented in future release
   toast.add({
     severity: 'info',
     summary: 'Info',

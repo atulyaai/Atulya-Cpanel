@@ -118,7 +118,6 @@ export class SSLProvider {
       const certificate = await this.getCertificateInfo(options.domain);
       
       if (certificate.status === 'valid') {
-        console.log(`SSL certificate issued successfully for ${options.domain}`);
         return certificate;
       } else {
         throw new Error(`Failed to issue SSL certificate: ${stderr}`);

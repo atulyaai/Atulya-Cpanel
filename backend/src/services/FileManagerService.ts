@@ -44,7 +44,6 @@ export class FileManagerService {
 
       return directoryInfo;
     } catch (error) {
-      console.error('Failed to list directory:', error);
       throw error;
     }
   }
@@ -65,7 +64,6 @@ export class FileManagerService {
 
       return fileInfo;
     } catch (error) {
-      console.error('Failed to get file info:', error);
       throw error;
     }
   }
@@ -86,7 +84,6 @@ export class FileManagerService {
 
       return content;
     } catch (error) {
-      console.error('Failed to read file:', error);
       throw error;
     }
   }
@@ -259,7 +256,6 @@ export class FileManagerService {
 
       return results;
     } catch (error) {
-      console.error('Failed to search files:', error);
       throw error;
     }
   }
@@ -438,7 +434,7 @@ export class FileManagerService {
         }
       });
     } catch (error) {
-      console.error('Failed to log file operation:', error);
+      
     }
   }
 

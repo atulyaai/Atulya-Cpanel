@@ -49,7 +49,6 @@ export class SystemProvider {
 
   async _exec(command: string, options: any = {}) {
     if (this.dryRun) {
-      console.log(`[DRY RUN] ${command}`);
       return { stdout: 'dry-run', stderr: '' };
     }
     return execAsync(command, options);
@@ -437,7 +436,7 @@ ${config.sslEnabled ? `
         }
       }
     } catch (error) {
-      console.error('Failed to list Nginx sites:', error);
+      
     }
     
     return sites;
@@ -520,8 +519,8 @@ ${config.sslEnabled ? `
     nginx: { active: boolean; running: boolean };
     apache: { active: boolean; running: boolean };
   }> {
-    const nginxStatus = await this.getServiceStatus('nginx');
-    const apacheStatus = await this.getServiceStatus('apache2');
+    const nginxStatus = await this.getIndividualServiceStatus('nginx');
+    const apacheStatus = await this.getIndividualServiceStatus('apache2');
     
     return {
       nginx: nginxStatus,
@@ -532,7 +531,7 @@ ${config.sslEnabled ? `
   /**
    * Get individual service status
    */
-  private async getServiceStatus(service: string): Promise<{ active: boolean; running: boolean }> {
+  private async getIndividualServiceStatus(service: string): Promise<{ active: boolean; running: boolean }> {
     try {
       const { stdout } = await this._exec(`systemctl is-active ${service}`);
       const isActive = stdout.trim() === 'active';

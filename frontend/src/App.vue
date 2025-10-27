@@ -1,9 +1,15 @@
 <template>
-  <div id="app" class="min-h-screen bg-gray-50">
+  <div
+    id="app"
+    class="min-h-screen bg-gray-50"
+  >
     <!-- Loading overlay -->
-    <div v-if="isLoading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      v-if="isLoading"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
       <div class="bg-white rounded-lg p-6 flex items-center space-x-4">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
         <span class="text-gray-700">Loading...</span>
       </div>
     </div>
@@ -14,7 +20,10 @@
       <LoginPage v-if="!isAuthenticated" />
       
       <!-- Main layout -->
-      <div v-else class="flex">
+      <div
+        v-else
+        class="flex"
+      >
         <!-- Sidebar -->
         <Sidebar />
         

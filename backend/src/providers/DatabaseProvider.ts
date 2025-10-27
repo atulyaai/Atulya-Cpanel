@@ -502,9 +502,7 @@ export class DatabaseProvider {
         await connection.execute(`OPTIMIZE TABLE ${dbName}.*`);
       }
       
-      console.log('Database optimization completed');
-    } catch (error) {
-      console.error('Failed to optimize databases:', error);
+      } catch (error) {
       throw error;
     }
   }
@@ -548,10 +546,8 @@ export class DatabaseProvider {
       // Create backup using mysqldump
       await execAsync(`mysqldump --all-databases > ${backupPath}`);
       
-      console.log(`Database backup created: ${backupPath}`);
       return backupPath;
     } catch (error) {
-      console.error('Failed to create database backup:', error);
       throw error;
     }
   }

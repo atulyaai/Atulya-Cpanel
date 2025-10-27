@@ -167,7 +167,6 @@ export function useWebSocket() {
 
     // Connection events
     socket.on('connect', () => {
-      console.log('WebSocket connected');
       isConnected.value = true;
       isConnecting.value = false;
       connectionError.value = null;
@@ -181,7 +180,6 @@ export function useWebSocket() {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('WebSocket disconnected:', reason);
       isConnected.value = false;
       isConnecting.value = false;
       
@@ -192,13 +190,11 @@ export function useWebSocket() {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
       isConnecting.value = false;
       connectionError.value = error.message;
     });
 
     socket.on('error', (error) => {
-      console.error('WebSocket error:', error);
       connectionError.value = error.message;
     });
 
@@ -224,7 +220,7 @@ export function useWebSocket() {
     });
 
     socket.on('connected', (data) => {
-      console.log('WebSocket welcome:', data);
+      // WebSocket connected successfully
     });
   }
 

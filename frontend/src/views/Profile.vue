@@ -2,8 +2,12 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
-        <p class="text-gray-600">Manage your account settings</p>
+        <h1 class="text-2xl font-bold text-gray-900">
+          Profile
+        </h1>
+        <p class="text-gray-600">
+          Manage your account settings
+        </p>
       </div>
     </div>
 
@@ -11,8 +15,13 @@
       <!-- Profile Information -->
       <div class="lg:col-span-2">
         <div class="card">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Profile Information</h3>
-          <form @submit.prevent="updateProfile" class="space-y-4">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Profile Information
+          </h3>
+          <form
+            class="space-y-4"
+            @submit.prevent="updateProfile"
+          >
             <div>
               <label class="label">Username</label>
               <input
@@ -20,7 +29,7 @@
                 type="text"
                 class="input"
                 placeholder="Enter username"
-              />
+              >
             </div>
             <div>
               <label class="label">Email Address</label>
@@ -29,7 +38,7 @@
                 type="email"
                 class="input"
                 placeholder="Enter email"
-              />
+              >
             </div>
             <div>
               <label class="label">Role</label>
@@ -38,9 +47,12 @@
                 class="input bg-gray-100"
                 :value="authStore.user?.role"
                 disabled
-              />
+              >
             </div>
-            <button type="submit" class="btn-primary">
+            <button
+              type="submit"
+              class="btn-primary"
+            >
               Update Profile
             </button>
           </form>
@@ -48,8 +60,13 @@
 
         <!-- Change Password -->
         <div class="card">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
-          <form @submit.prevent="changePassword" class="space-y-4">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Change Password
+          </h3>
+          <form
+            class="space-y-4"
+            @submit.prevent="changePassword"
+          >
             <div>
               <label class="label">Current Password</label>
               <input
@@ -57,7 +74,7 @@
                 type="password"
                 class="input"
                 placeholder="Enter current password"
-              />
+              >
             </div>
             <div>
               <label class="label">New Password</label>
@@ -66,7 +83,7 @@
                 type="password"
                 class="input"
                 placeholder="Enter new password"
-              />
+              >
             </div>
             <div>
               <label class="label">Confirm New Password</label>
@@ -75,9 +92,12 @@
                 type="password"
                 class="input"
                 placeholder="Confirm new password"
-              />
+              >
             </div>
-            <button type="submit" class="btn-primary">
+            <button
+              type="submit"
+              class="btn-primary"
+            >
               Change Password
             </button>
           </form>
@@ -87,7 +107,9 @@
       <!-- Account Info -->
       <div>
         <div class="card">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Account Information</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Account Information
+          </h3>
           <div class="space-y-4">
             <div>
               <label class="label">Account Status</label>
@@ -95,33 +117,41 @@
             </div>
             <div>
               <label class="label">Member Since</label>
-              <p class="text-sm text-gray-900">{{ formatDate(authStore.user?.createdAt) }}</p>
+              <p class="text-sm text-gray-900">
+                {{ formatDate(authStore.user?.createdAt) }}
+              </p>
             </div>
             <div>
               <label class="label">Last Login</label>
-              <p class="text-sm text-gray-900">{{ formatDate(authStore.user?.lastLogin) }}</p>
+              <p class="text-sm text-gray-900">
+                {{ formatDate(authStore.user?.lastLogin) }}
+              </p>
             </div>
             <div>
               <label class="label">Account ID</label>
-              <p class="text-sm text-gray-900 font-mono">{{ authStore.user?.id }}</p>
+              <p class="text-sm text-gray-900 font-mono">
+                {{ authStore.user?.id }}
+              </p>
             </div>
           </div>
         </div>
 
         <!-- Security Actions -->
         <div class="card">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Security</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Security
+          </h3>
           <div class="space-y-3">
             <button class="w-full btn-secondary">
-              <i class="pi pi-key mr-2"></i>
+              <i class="pi pi-key mr-2" />
               Enable 2FA
             </button>
             <button class="w-full btn-secondary">
-              <i class="pi pi-sign-out mr-2"></i>
+              <i class="pi pi-sign-out mr-2" />
               Logout All Devices
             </button>
             <button class="w-full btn-danger">
-              <i class="pi pi-trash mr-2"></i>
+              <i class="pi pi-trash mr-2" />
               Delete Account
             </button>
           </div>
@@ -157,7 +187,7 @@ function formatDate(dateString?: string): string {
 }
 
 async function updateProfile() {
-  // TODO: Implement profile update
+  // Profile update functionality - to be implemented in Phase 5
   toast.add({
     severity: 'info',
     summary: 'Info',
