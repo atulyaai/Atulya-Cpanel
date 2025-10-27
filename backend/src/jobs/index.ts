@@ -307,7 +307,12 @@ export class JobManager {
   private async healthCheck(): Promise<void> {
     console.log('🏥 Running health check...');
     
-    const healthStatus = {
+    const healthStatus: {
+      timestamp: Date;
+      services: Record<string, any>;
+      resources: Record<string, any>;
+      alerts: string[];
+    } = {
       timestamp: new Date(),
       services: {},
       resources: {},
@@ -570,7 +575,7 @@ export class JobManager {
         to: 'admin@localhost',
         subject: 'System Health Alert',
         text: `System health issues detected:\n\n${alertText}`,
-        html: `<h2>System Health Alert</h2><p>Issues detected:</p><ul>${healthStatus.alerts.map(alert => `<li>${alert}</li>`).join('')}</ul>`
+        html: `<h2>System Health Alert</h2><p>Issues detected:</p><ul>${healthStatus.alerts.map((alert: string) => `<li>${alert}</li>`).join('')}</ul>`
       });
     } catch (error) {
       console.error('Failed to send health alert:', error);
@@ -580,12 +585,12 @@ export class JobManager {
   /**
    * Get job status
    */
-  getJobStatus(): { [key: string]: { running: boolean; lastRun?: Date; nextRun?: Date } } {
-    const status: { [key: string]: { running: boolean; lastRun?: Date; nextRun?: Date } } = {};
+  getJobStatus(): { [key: string]: { running: boolean; lastRun?: Date | undefined; nextRun?: Date | undefined } } {
+    const status: { [key: string]: { running: boolean; lastRun?: Date | undefined; nextRun?: Date | undefined } } = {};
     
-    for (const [name, task] of this.jobs) {
+    for (const [name] of this.jobs) {
       status[name] = {
-        running: task.running || false,
+        running: false, // cron.ScheduledTask doesn't have a running property
         lastRun: this.getLastRunTime(name),
         nextRun: this.getNextRunTime(name)
       };
@@ -600,7 +605,8 @@ export class JobManager {
   private getLastRunTime(jobName: string): Date | undefined {
     const history = this.jobHistory.get(jobName);
     if (history && history.length > 0) {
-      return history[history.length - 1].timestamp;
+      const lastJob = history[history.length - 1];
+      return lastJob?.timestamp;
     }
     return undefined;
   }
@@ -608,7 +614,7 @@ export class JobManager {
   /**
    * Get next run time for a job
    */
-  private getNextRunTime(jobName: string): Date | undefined {
+  private getNextRunTime(_jobName: string): Date | undefined {
     // This would require parsing cron expressions, simplified for now
     return undefined;
   }

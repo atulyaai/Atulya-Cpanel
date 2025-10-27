@@ -104,7 +104,7 @@ export class DatabaseProvider {
     const randomValues = randomBytes(length);
     
     for (let i = 0; i < length; i++) {
-      password += charset[randomValues[i] % charset.length];
+      password += charset[randomValues[i]! % charset.length];
     }
     
     return password;
@@ -151,7 +151,7 @@ export class DatabaseProvider {
 
       // Get database size
       const size = await this.getDatabaseSize(dbName);
-      const tables = await this.getTableCount(dbName);
+      await this.getTableCount(dbName);
 
       return {
         name: dbName,
@@ -390,7 +390,6 @@ export class DatabaseProvider {
    */
   async backupDatabase(name: string, outputPath: string): Promise<void> {
     const { spawn } = await import('child_process');
-    const { promisify } = await import('util');
 
     return new Promise((resolve, reject) => {
       const mysqldump = spawn('mysqldump', [
@@ -491,6 +490,69 @@ export class DatabaseProvider {
         totalSize: 0,
         totalTables: 0,
       };
+    }
+  }
+
+  async optimizeDatabases(): Promise<void> {
+    try {
+      const connection = await this.getConnection();
+      const databases = await this.listDatabases();
+      
+      for (const dbName of databases) {
+        await connection.execute(`OPTIMIZE TABLE ${dbName}.*`);
+      }
+      
+      console.log('Database optimization completed');
+    } catch (error) {
+      console.error('Failed to optimize databases:', error);
+      throw error;
+    }
+  }
+
+  async getStatus(): Promise<{ status: string; uptime: number; connections: number }> {
+    try {
+      const connection = await this.getConnection();
+      const [rows] = await connection.execute('SHOW STATUS LIKE "Uptime"');
+      const [connRows] = await connection.execute('SHOW STATUS LIKE "Threads_connected"');
+      
+      const uptime = (rows as any[])[0]?.Value || 0;
+      const connections = (connRows as any[])[0]?.Value || 0;
+      
+      return {
+        status: 'running',
+        uptime: parseInt(uptime),
+        connections: parseInt(connections),
+      };
+    } catch (error) {
+      console.error('Failed to get database status:', error);
+      return {
+        status: 'error',
+        uptime: 0,
+        connections: 0,
+      };
+    }
+  }
+
+  async createBackup(): Promise<string> {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = `/var/backups/mysql/backup-${timestamp}.sql`;
+      
+      // Create backup directory if it doesn't exist
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      await execAsync(`mkdir -p /var/backups/mysql`);
+      
+      // Create backup using mysqldump
+      await execAsync(`mysqldump --all-databases > ${backupPath}`);
+      
+      console.log(`Database backup created: ${backupPath}`);
+      return backupPath;
+    } catch (error) {
+      console.error('Failed to create database backup:', error);
+      throw error;
     }
   }
 }

@@ -217,3 +217,24 @@ enum BackupStatus {
   COMPLETED
   FAILED
 }
+
+model HealthStatus {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  services  Json
+  resources Json
+  alerts    String[]
+
+  @@map("health_status")
+}
+
+model SystemMetrics {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  cpu       Json
+  memory    Json
+  disk      Json
+  network   Json
+
+  @@map("system_metrics")
+}
