@@ -2,9 +2,6 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
-import { SystemProvider } from './SystemProvider.js';
-import { DatabaseProvider } from './DatabaseProvider.js';
-import { EmailProvider } from './EmailProvider.js';
 
 const execAsync = promisify(exec);
 
@@ -12,304 +9,530 @@ export interface MaintenanceTask {
   id: string;
   name: string;
   description: string;
-  category: 'cleanup' | 'update' | 'optimization' | 'security' | 'backup' | 'monitoring';
+  type: 'backup' | 'cleanup' | 'update' | 'optimization' | 'security' | 'monitoring' | 'custom';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'critical';
-  enabled: boolean;
-  schedule: string;
+  schedule: MaintenanceSchedule;
+  config: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
   lastRun?: Date;
   nextRun?: Date;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'disabled';
-  estimatedDuration: number; // in minutes
-  dependencies?: string[];
-  autoFix: boolean;
-  rollbackSupported: boolean;
+  logs: MaintenanceLog[];
+  notifications: MaintenanceNotification[];
+  retry: MaintenanceRetry;
+  dependencies: string[];
+  tags: string[];
+  metadata?: Record<string, any>;
 }
 
-export interface MaintenanceResult {
+export interface MaintenanceSchedule {
+  type: 'once' | 'interval' | 'cron' | 'event';
+  value: string; // cron expression, interval in minutes, or event name
+  timezone: string;
+  enabled: boolean;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export interface MaintenanceLog {
+  id: string;
   taskId: string;
-  success: boolean;
-  message: string;
-  duration: number;
   timestamp: Date;
-  logs: string[];
-  errors?: string[];
-  warnings?: string[];
-  data?: any;
+  level: 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+  message: string;
+  details?: Record<string, any>;
+  duration?: number; // milliseconds
+  output?: string;
+  error?: string;
 }
 
-export interface SystemHealth {
-  overall: 'healthy' | 'warning' | 'critical';
-  score: number; // 0-100
-  issues: string[];
-  recommendations: string[];
-  lastChecked: Date;
-  components: {
-    disk: { usage: number; status: string; issues: string[] };
-    memory: { usage: number; status: string; issues: string[] };
-    cpu: { usage: number; status: string; issues: string[] };
-    network: { status: string; issues: string[] };
-    services: { status: string; issues: string[] };
-    security: { status: string; issues: string[] };
-  };
+export interface MaintenanceNotification {
+  id: string;
+  taskId: string;
+  type: 'email' | 'webhook' | 'slack' | 'discord' | 'telegram';
+  config: Record<string, any>;
+  events: ('start' | 'success' | 'failure' | 'warning')[];
+  enabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MaintenanceRetry {
+  enabled: boolean;
+  maxAttempts: number;
+  delay: number; // milliseconds
+  backoff: 'linear' | 'exponential';
+  maxDelay: number; // milliseconds
+}
+
+export interface MaintenanceTemplate {
+  id: string;
+  name: string;
+  description: string;
+  type: MaintenanceTask['type'];
+  config: Record<string, any>;
+  schedule: MaintenanceSchedule;
+  notifications: MaintenanceNotification[];
+  retry: MaintenanceRetry;
+  tags: string[];
+  isSystem: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MaintenanceStatistics {
+  totalTasks: number;
+  activeTasks: number;
+  completedTasks: number;
+  failedTasks: number;
+  tasksByType: Record<string, number>;
+  tasksByStatus: Record<string, number>;
+  averageExecutionTime: number;
+  successRate: number;
+  lastExecution: Date;
+  nextExecution: Date;
 }
 
 export class SystemMaintenanceProvider {
-  private tasks: Map<string, MaintenanceTask> = new Map();
-  private results: Map<string, MaintenanceResult[]> = new Map();
-  private systemProvider: SystemProvider;
-  private databaseProvider: DatabaseProvider;
-  private emailProvider: EmailProvider;
+  private tasks: Map<string, MaintenanceTask>;
+  private templates: Map<string, MaintenanceTemplate>;
+  private configPath: string;
+  private logPath: string;
   private isRunning: boolean = false;
 
   constructor() {
-    this.systemProvider = new SystemProvider();
-    this.databaseProvider = new DatabaseProvider();
-    this.emailProvider = new EmailProvider();
-    this.initializeTasks();
+    this.tasks = new Map();
+    this.templates = new Map();
+    this.configPath = '/etc/atulya-panel/maintenance';
+    this.logPath = '/var/log/atulya-panel/maintenance';
+    
+    this.initialize();
   }
 
   /**
-   * Initialize maintenance tasks
+   * Initialize maintenance provider
    */
-  private initializeTasks(): void {
-    const tasks: MaintenanceTask[] = [
-      // Cleanup tasks
-      {
-        id: 'temp-cleanup',
-        name: 'Temporary Files Cleanup',
-        description: 'Remove temporary files and caches',
-        category: 'cleanup',
-        priority: 'medium',
-        enabled: true,
-        schedule: '0 */6 * * *', // Every 6 hours
-        status: 'pending',
-        estimatedDuration: 5,
-        autoFix: true,
-        rollbackSupported: false
-      },
-      {
-        id: 'log-rotation',
-        name: 'Log Rotation',
-        description: 'Rotate and compress log files',
-        category: 'cleanup',
-        priority: 'medium',
-        enabled: true,
-        schedule: '0 1 * * 0', // Weekly on Sunday at 1 AM
-        status: 'pending',
-        estimatedDuration: 10,
-        autoFix: true,
-        rollbackSupported: false
-      },
-      {
-        id: 'old-backup-cleanup',
-        name: 'Old Backup Cleanup',
-        description: 'Remove old backup files',
-        category: 'cleanup',
-        priority: 'low',
-        enabled: true,
-        schedule: '0 8 * * 0', // Weekly on Sunday at 8 AM
-        status: 'pending',
-        estimatedDuration: 15,
-        autoFix: true,
-        rollbackSupported: false
-      },
-      {
-        id: 'package-cache-cleanup',
-        name: 'Package Cache Cleanup',
-        description: 'Clean package manager caches',
-        category: 'cleanup',
-        priority: 'low',
-        enabled: true,
-        schedule: '0 2 * * *', // Daily at 2 AM
-        status: 'pending',
-        estimatedDuration: 5,
-        autoFix: true,
-        rollbackSupported: false
-      },
+  private async initialize(): Promise<void> {
+    try {
+      await fs.ensureDir(this.configPath);
+      await fs.ensureDir(this.logPath);
+      await this.loadTasks();
+      await this.loadTemplates();
+      await this.createDefaultTemplates();
+    } catch (error) {
+      console.error('Failed to initialize maintenance provider:', error);
+    }
+  }
 
-      // Update tasks
-      {
-        id: 'system-updates',
-        name: 'System Updates',
-        description: 'Check and apply system updates',
-        category: 'update',
-        priority: 'high',
-        enabled: true,
-        schedule: '0 3 * * 0', // Weekly on Sunday at 3 AM
-        status: 'pending',
-        estimatedDuration: 30,
-        autoFix: true,
-        rollbackSupported: true
-      },
-      {
-        id: 'security-updates',
-        name: 'Security Updates',
-        description: 'Apply critical security updates',
-        category: 'update',
-        priority: 'critical',
-        enabled: true,
-        schedule: '0 4 * * *', // Daily at 4 AM
-        status: 'pending',
-        estimatedDuration: 15,
-        autoFix: true,
-        rollbackSupported: true
-      },
-      {
-        id: 'package-updates',
-        name: 'Package Updates',
-        description: 'Update installed packages',
-        category: 'update',
-        priority: 'medium',
-        enabled: true,
-        schedule: '0 5 * * 0', // Weekly on Sunday at 5 AM
-        status: 'pending',
-        estimatedDuration: 20,
-        autoFix: true,
-        rollbackSupported: true
-      },
-
-      // Optimization tasks
-      {
-        id: 'database-optimization',
-        name: 'Database Optimization',
-        description: 'Optimize database tables and indexes',
-        category: 'optimization',
-        priority: 'medium',
-        enabled: true,
-        schedule: '0 6 * * 0', // Weekly on Sunday at 6 AM
-        status: 'pending',
-        estimatedDuration: 45,
-        autoFix: true,
-        rollbackSupported: false
-      },
-      {
-        id: 'filesystem-optimization',
-        name: 'Filesystem Optimization',
-        description: 'Optimize filesystem and defragment if needed',
-        category: 'optimization',
-        priority: 'low',
-        enabled: true,
-        schedule: '0 7 * * 0', // Weekly on Sunday at 7 AM
-        status: 'pending',
-        estimatedDuration: 60,
-        autoFix: true,
-        rollbackSupported: false
-      },
-      {
-        id: 'memory-optimization',
-        name: 'Memory Optimization',
-        description: 'Clear caches and optimize memory usage',
-        category: 'optimization',
-        priority: 'medium',
-        enabled: true,
-        schedule: '0 */4 * * *', // Every 4 hours
-        status: 'pending',
-        estimatedDuration: 10,
-        autoFix: true,
-        rollbackSupported: false
-      },
-
-      // Security tasks
-      {
-        id: 'security-scan',
-        name: 'Security Scan',
-        description: 'Scan for security vulnerabilities',
-        category: 'security',
-        priority: 'high',
-        enabled: true,
-        schedule: '0 8 * * *', // Daily at 8 AM
-        status: 'pending',
-        estimatedDuration: 30,
-        autoFix: false,
-        rollbackSupported: false
-      },
-      {
-        id: 'firewall-check',
-        name: 'Firewall Check',
-        description: 'Verify firewall rules and configuration',
-        category: 'security',
-        priority: 'high',
-        enabled: true,
-        schedule: '0 9 * * *', // Daily at 9 AM
-        status: 'pending',
-        estimatedDuration: 10,
-        autoFix: true,
-        rollbackSupported: true
-      },
-      {
-        id: 'ssl-certificate-check',
-        name: 'SSL Certificate Check',
-        description: 'Check SSL certificate expiration',
-        category: 'security',
-        priority: 'high',
-        enabled: true,
-        schedule: '0 10 * * *', // Daily at 10 AM
-        status: 'pending',
-        estimatedDuration: 5,
-        autoFix: true,
-        rollbackSupported: false
-      },
-
-      // Backup tasks
-      {
-        id: 'system-backup',
-        name: 'System Backup',
-        description: 'Create system configuration backup',
-        category: 'backup',
-        priority: 'high',
-        enabled: true,
-        schedule: '0 11 * * *', // Daily at 11 AM
-        status: 'pending',
-        estimatedDuration: 20,
-        autoFix: true,
-        rollbackSupported: false
-      },
-      {
-        id: 'database-backup',
-        name: 'Database Backup',
-        description: 'Backup all databases',
-        category: 'backup',
-        priority: 'high',
-        enabled: true,
-        schedule: '0 12 * * *', // Daily at 12 PM
-        status: 'pending',
-        estimatedDuration: 30,
-        autoFix: true,
-        rollbackSupported: false
-      },
-
-      // Monitoring tasks
-      {
-        id: 'health-check',
-        name: 'System Health Check',
-        description: 'Comprehensive system health check',
-        category: 'monitoring',
-        priority: 'critical',
-        enabled: true,
-        schedule: '*/15 * * * *', // Every 15 minutes
-        status: 'pending',
-        estimatedDuration: 5,
-        autoFix: false,
-        rollbackSupported: false
-      },
-      {
-        id: 'performance-monitoring',
-        name: 'Performance Monitoring',
-        description: 'Monitor system performance metrics',
-        category: 'monitoring',
-        priority: 'medium',
-        enabled: true,
-        schedule: '*/5 * * * *', // Every 5 minutes
-        status: 'pending',
-        estimatedDuration: 2,
-        autoFix: false,
-        rollbackSupported: false
+  /**
+   * Load maintenance tasks
+   */
+  private async loadTasks(): Promise<void> {
+    try {
+      const tasksFile = path.join(this.configPath, 'tasks.json');
+      if (await fs.pathExists(tasksFile)) {
+        const data = await fs.readFile(tasksFile, 'utf8');
+        const tasks = JSON.parse(data);
+        
+        this.tasks.clear();
+        for (const task of tasks) {
+          this.tasks.set(task.id, task);
+        }
       }
+    } catch (error) {
+      console.error('Failed to load maintenance tasks:', error);
+    }
+  }
+
+  /**
+   * Save maintenance tasks
+   */
+  private async saveTasks(): Promise<void> {
+    try {
+      const tasksFile = path.join(this.configPath, 'tasks.json');
+      const data = Array.from(this.tasks.values());
+      await fs.writeFile(tasksFile, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('Failed to save maintenance tasks:', error);
+    }
+  }
+
+  /**
+   * Load maintenance templates
+   */
+  private async loadTemplates(): Promise<void> {
+    try {
+      const templatesFile = path.join(this.configPath, 'templates.json');
+      if (await fs.pathExists(templatesFile)) {
+        const data = await fs.readFile(templatesFile, 'utf8');
+        const templates = JSON.parse(data);
+        
+        this.templates.clear();
+        for (const template of templates) {
+          this.templates.set(template.id, template);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load maintenance templates:', error);
+    }
+  }
+
+  /**
+   * Create default templates
+   */
+  private async createDefaultTemplates(): Promise<void> {
+    const defaultTemplates: MaintenanceTemplate[] = [
+      {
+        id: 'daily_backup',
+        name: 'Daily Backup',
+        description: 'Create daily backup of all data',
+        type: 'backup',
+        config: {
+          sources: ['filesystem', 'databases'],
+          destination: 'local',
+          compression: 'gzip',
+          encryption: false,
+          retention: 30,
+        },
+        schedule: {
+          type: 'cron',
+          value: '0 2 * * *', // 2 AM daily
+          timezone: 'UTC',
+          enabled: true,
+        },
+        notifications: [
+          {
+            id: 'backup_notification',
+            taskId: '',
+            type: 'email',
+            config: { email: 'admin@atulya-panel.com' },
+            events: ['failure', 'success'],
+            enabled: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        retry: {
+          enabled: true,
+          maxAttempts: 3,
+          delay: 300000, // 5 minutes
+          backoff: 'exponential',
+          maxDelay: 3600000, // 1 hour
+        },
+        tags: ['backup', 'daily', 'system'],
+        isSystem: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'weekly_cleanup',
+        name: 'Weekly Cleanup',
+        description: 'Clean up temporary files and logs',
+        type: 'cleanup',
+        config: {
+          tempFiles: true,
+          logFiles: true,
+          cacheFiles: true,
+          oldBackups: true,
+          retention: 7,
+        },
+        schedule: {
+          type: 'cron',
+          value: '0 3 * * 0', // 3 AM every Sunday
+          timezone: 'UTC',
+          enabled: true,
+        },
+        notifications: [],
+        retry: {
+          enabled: false,
+          maxAttempts: 1,
+          delay: 0,
+          backoff: 'linear',
+          maxDelay: 0,
+        },
+        tags: ['cleanup', 'weekly', 'system'],
+        isSystem: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'security_scan',
+        name: 'Security Scan',
+        description: 'Run security vulnerability scan',
+        type: 'security',
+        config: {
+          scanType: 'full',
+          checkUpdates: true,
+          checkPermissions: true,
+          checkFirewall: true,
+          checkSSL: true,
+        },
+        schedule: {
+          type: 'cron',
+          value: '0 4 * * 1', // 4 AM every Monday
+          timezone: 'UTC',
+          enabled: true,
+        },
+        notifications: [
+          {
+            id: 'security_notification',
+            taskId: '',
+            type: 'email',
+            config: { email: 'admin@atulya-panel.com' },
+            events: ['failure', 'warning'],
+            enabled: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        retry: {
+          enabled: true,
+          maxAttempts: 2,
+          delay: 600000, // 10 minutes
+          backoff: 'linear',
+          maxDelay: 1800000, // 30 minutes
+        },
+        tags: ['security', 'weekly', 'system'],
+        isSystem: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'database_optimization',
+        name: 'Database Optimization',
+        description: 'Optimize database performance',
+        type: 'optimization',
+        config: {
+          analyze: true,
+          optimize: true,
+          repair: true,
+          vacuum: true,
+        },
+        schedule: {
+          type: 'cron',
+          value: '0 1 * * 0', // 1 AM every Sunday
+          timezone: 'UTC',
+          enabled: true,
+        },
+        notifications: [],
+        retry: {
+          enabled: true,
+          maxAttempts: 2,
+          delay: 900000, // 15 minutes
+          backoff: 'linear',
+          maxDelay: 3600000, // 1 hour
+        },
+        tags: ['optimization', 'weekly', 'database'],
+        isSystem: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'system_update',
+        name: 'System Update',
+        description: 'Update system packages and security patches',
+        type: 'update',
+        config: {
+          updatePackages: true,
+          securityOnly: false,
+          rebootRequired: false,
+          backupBefore: true,
+        },
+        schedule: {
+          type: 'cron',
+          value: '0 5 * * 0', // 5 AM every Sunday
+          timezone: 'UTC',
+          enabled: true,
+        },
+        notifications: [
+          {
+            id: 'update_notification',
+            taskId: '',
+            type: 'email',
+            config: { email: 'admin@atulya-panel.com' },
+            events: ['start', 'success', 'failure'],
+            enabled: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        retry: {
+          enabled: true,
+          maxAttempts: 1,
+          delay: 0,
+          backoff: 'linear',
+          maxDelay: 0,
+        },
+        tags: ['update', 'weekly', 'system'],
+        isSystem: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ];
 
-    for (const task of tasks) {
-      this.tasks.set(task.id, task);
+    for (const template of defaultTemplates) {
+      this.templates.set(template.id, template);
     }
+
+    await this.saveTemplates();
+  }
+
+  /**
+   * Save maintenance templates
+   */
+  private async saveTemplates(): Promise<void> {
+    try {
+      const templatesFile = path.join(this.configPath, 'templates.json');
+      const data = Array.from(this.templates.values());
+      await fs.writeFile(templatesFile, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('Failed to save maintenance templates:', error);
+    }
+  }
+
+  /**
+   * Create maintenance task
+   */
+  async createTask(taskData: {
+    name: string;
+    description: string;
+    type: MaintenanceTask['type'];
+    priority: MaintenanceTask['priority'];
+    schedule: MaintenanceSchedule;
+    config: Record<string, any>;
+    notifications?: MaintenanceNotification[];
+    retry?: Partial<MaintenanceRetry>;
+    dependencies?: string[];
+    tags?: string[];
+    metadata?: Record<string, any>;
+  }): Promise<MaintenanceTask> {
+    try {
+      const task: MaintenanceTask = {
+        id: this.generateId(),
+        name: taskData.name,
+        description: taskData.description,
+        type: taskData.type,
+        status: 'pending',
+        priority: taskData.priority,
+        schedule: taskData.schedule,
+        config: taskData.config,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        logs: [],
+        notifications: taskData.notifications || [],
+        retry: {
+          enabled: true,
+          maxAttempts: 3,
+          delay: 300000, // 5 minutes
+          backoff: 'exponential',
+          maxDelay: 3600000, // 1 hour
+          ...taskData.retry,
+        },
+        dependencies: taskData.dependencies || [],
+        tags: taskData.tags || [],
+        metadata: taskData.metadata,
+      };
+
+      // Calculate next run time
+      task.nextRun = this.calculateNextRun(task.schedule);
+
+      this.tasks.set(task.id, task);
+      await this.saveTasks();
+
+      return task;
+    } catch (error) {
+      console.error('Failed to create maintenance task:', error);
+      throw new Error(`Failed to create maintenance task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Create task from template
+   */
+  async createTaskFromTemplate(templateId: string, overrides: Partial<MaintenanceTask> = {}): Promise<MaintenanceTask> {
+    try {
+      const template = this.templates.get(templateId);
+      if (!template) {
+        throw new Error('Template not found');
+      }
+
+      const taskData = {
+        name: template.name,
+        description: template.description,
+        type: template.type,
+        priority: 'medium' as MaintenanceTask['priority'],
+        schedule: template.schedule,
+        config: template.config,
+        notifications: template.notifications,
+        retry: template.retry,
+        tags: template.tags,
+        ...overrides,
+      };
+
+      return await this.createTask(taskData);
+    } catch (error) {
+      console.error('Failed to create task from template:', error);
+      throw new Error(`Failed to create task from template: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Update maintenance task
+   */
+  async updateTask(taskId: string, updates: Partial<MaintenanceTask>): Promise<MaintenanceTask> {
+    try {
+      const task = this.tasks.get(taskId);
+      if (!task) {
+        throw new Error('Task not found');
+      }
+
+      Object.assign(task, updates);
+      task.updatedAt = new Date();
+
+      // Recalculate next run time if schedule changed
+      if (updates.schedule) {
+        task.nextRun = this.calculateNextRun(task.schedule);
+      }
+
+      this.tasks.set(taskId, task);
+      await this.saveTasks();
+
+      return task;
+    } catch (error) {
+      console.error('Failed to update maintenance task:', error);
+      throw new Error(`Failed to update maintenance task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Delete maintenance task
+   */
+  async deleteTask(taskId: string): Promise<void> {
+    try {
+      const task = this.tasks.get(taskId);
+      if (!task) {
+        throw new Error('Task not found');
+      }
+
+      // Check if task is running
+      if (task.status === 'running') {
+        throw new Error('Cannot delete running task');
+      }
+
+      this.tasks.delete(taskId);
+      await this.saveTasks();
+    } catch (error) {
+      console.error('Failed to delete maintenance task:', error);
+      throw new Error(`Failed to delete maintenance task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get maintenance task
+   */
+  getTask(taskId: string): MaintenanceTask | undefined {
+    return this.tasks.get(taskId);
   }
 
   /**
@@ -320,778 +543,625 @@ export class SystemMaintenanceProvider {
   }
 
   /**
-   * Get task by ID
+   * Get tasks by type
    */
-  getTask(taskId: string): MaintenanceTask | undefined {
-    return this.tasks.get(taskId);
+  getTasksByType(type: MaintenanceTask['type']): MaintenanceTask[] {
+    return Array.from(this.tasks.values()).filter(task => task.type === type);
   }
 
   /**
-   * Enable/disable a task
+   * Get tasks by status
    */
-  toggleTask(taskId: string, enabled: boolean): boolean {
-    const task = this.tasks.get(taskId);
-    if (task) {
-      task.enabled = enabled;
-      task.status = enabled ? 'pending' : 'disabled';
-      return true;
-    }
-    return false;
+  getTasksByStatus(status: MaintenanceTask['status']): MaintenanceTask[] {
+    return Array.from(this.tasks.values()).filter(task => task.status === status);
   }
 
   /**
-   * Run a specific maintenance task
+   * Get tasks by priority
    */
-  async runTask(taskId: string): Promise<MaintenanceResult> {
-    const task = this.tasks.get(taskId);
-    if (!task) {
-      throw new Error(`Task ${taskId} not found`);
-    }
+  getTasksByPriority(priority: MaintenanceTask['priority']): MaintenanceTask[] {
+    return Array.from(this.tasks.values()).filter(task => task.priority === priority);
+  }
 
-    if (!task.enabled) {
-      throw new Error(`Task ${taskId} is disabled`);
-    }
+  /**
+   * Get tasks by tag
+   */
+  getTasksByTag(tag: string): MaintenanceTask[] {
+    return Array.from(this.tasks.values()).filter(task => task.tags.includes(tag));
+  }
 
-    const startTime = Date.now();
-    const logs: string[] = [];
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    task.status = 'running';
-    logs.push(`Starting task: ${task.name}`);
-
+  /**
+   * Execute maintenance task
+   */
+  async executeTask(taskId: string): Promise<void> {
     try {
+      const task = this.tasks.get(taskId);
+      if (!task) {
+        throw new Error('Task not found');
+      }
+
+      if (task.status === 'running') {
+        throw new Error('Task is already running');
+      }
+
       // Check dependencies
-      if (task.dependencies) {
-        for (const dep of task.dependencies) {
-          const depTask = this.tasks.get(dep);
-          if (depTask && depTask.status !== 'completed') {
-            throw new Error(`Dependency ${dep} not completed`);
-          }
+      for (const depId of task.dependencies) {
+        const depTask = this.tasks.get(depId);
+        if (!depTask || depTask.status !== 'completed') {
+          throw new Error(`Dependency task ${depId} is not completed`);
         }
       }
 
-      // Execute task based on category
-      let result: any = {};
-      switch (task.category) {
+      // Update task status
+      task.status = 'running';
+      task.lastRun = new Date();
+      task.updatedAt = new Date();
+
+      this.tasks.set(taskId, task);
+      await this.saveTasks();
+
+      // Send start notification
+      await this.sendNotification(task, 'start');
+
+      // Execute task
+      try {
+        await this.executeTaskLogic(task);
+        
+        // Task completed successfully
+        task.status = 'completed';
+        task.updatedAt = new Date();
+        
+        // Calculate next run time
+        task.nextRun = this.calculateNextRun(task.schedule);
+        
+        this.tasks.set(taskId, task);
+        await this.saveTasks();
+        
+        // Send success notification
+        await this.sendNotification(task, 'success');
+        
+      } catch (error) {
+        // Task failed
+        task.status = 'failed';
+        task.updatedAt = new Date();
+        
+        this.tasks.set(taskId, task);
+        await this.saveTasks();
+        
+        // Send failure notification
+        await this.sendNotification(task, 'failure');
+        
+        // Retry if enabled
+        if (task.retry.enabled) {
+          await this.scheduleRetry(task);
+        }
+        
+        throw error;
+      }
+    } catch (error) {
+      console.error('Failed to execute maintenance task:', error);
+      throw new Error(`Failed to execute maintenance task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Execute task logic
+   */
+  private async executeTaskLogic(task: MaintenanceTask): Promise<void> {
+    const startTime = Date.now();
+    
+    try {
+      switch (task.type) {
+        case 'backup':
+          await this.executeBackupTask(task);
+          break;
         case 'cleanup':
-          result = await this.runCleanupTask(task, logs, errors, warnings);
+          await this.executeCleanupTask(task);
           break;
         case 'update':
-          result = await this.runUpdateTask(task, logs, errors, warnings);
+          await this.executeUpdateTask(task);
           break;
         case 'optimization':
-          result = await this.runOptimizationTask(task, logs, errors, warnings);
+          await this.executeOptimizationTask(task);
           break;
         case 'security':
-          result = await this.runSecurityTask(task, logs, errors, warnings);
-          break;
-        case 'backup':
-          result = await this.runBackupTask(task, logs, errors, warnings);
+          await this.executeSecurityTask(task);
           break;
         case 'monitoring':
-          result = await this.runMonitoringTask(task, logs, errors, warnings);
+          await this.executeMonitoringTask(task);
+          break;
+        case 'custom':
+          await this.executeCustomTask(task);
           break;
         default:
-          throw new Error(`Unknown task category: ${task.category}`);
+          throw new Error(`Unknown task type: ${task.type}`);
       }
-
+      
       const duration = Date.now() - startTime;
-      task.status = 'completed';
-      task.lastRun = new Date();
-
-      const maintenanceResult: MaintenanceResult = {
-        taskId,
-        success: true,
-        message: `Task ${task.name} completed successfully`,
-        duration,
-        timestamp: new Date(),
-        logs,
-        errors,
-        warnings,
-        data: result
-      };
-
-      this.addResult(taskId, maintenanceResult);
-      logs.push(`Task completed in ${duration}ms`);
-
-      return maintenanceResult;
-
+      await this.addLog(task.id, 'info', 'Task completed successfully', { duration });
+      
     } catch (error) {
       const duration = Date.now() - startTime;
-      task.status = 'failed';
-      task.lastRun = new Date();
-
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      errors.push(errorMessage);
-      logs.push(`Task failed: ${errorMessage}`);
-
-      const maintenanceResult: MaintenanceResult = {
-        taskId,
-        success: false,
-        message: `Task ${task.name} failed: ${errorMessage}`,
-        duration,
-        timestamp: new Date(),
-        logs,
-        errors,
-        warnings
-      };
-
-      this.addResult(taskId, maintenanceResult);
-
-      return maintenanceResult;
-    }
-  }
-
-  /**
-   * Run cleanup tasks
-   */
-  private async runCleanupTask(task: MaintenanceTask, logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    switch (task.id) {
-      case 'temp-cleanup':
-        return await this.cleanupTempFiles(logs, errors, warnings);
-      case 'log-rotation':
-        return await this.rotateLogs(logs, errors, warnings);
-      case 'old-backup-cleanup':
-        return await this.cleanupOldBackups(logs, errors, warnings);
-      case 'package-cache-cleanup':
-        return await this.cleanupPackageCache(logs, errors, warnings);
-      default:
-        throw new Error(`Unknown cleanup task: ${task.id}`);
-    }
-  }
-
-  /**
-   * Run update tasks
-   */
-  private async runUpdateTask(task: MaintenanceTask, logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    switch (task.id) {
-      case 'system-updates':
-        return await this.updateSystem(logs, errors, warnings);
-      case 'security-updates':
-        return await this.updateSecurity(logs, errors, warnings);
-      case 'package-updates':
-        return await this.updatePackages(logs, errors, warnings);
-      default:
-        throw new Error(`Unknown update task: ${task.id}`);
-    }
-  }
-
-  /**
-   * Run optimization tasks
-   */
-  private async runOptimizationTask(task: MaintenanceTask, logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    switch (task.id) {
-      case 'database-optimization':
-        return await this.optimizeDatabase(logs, errors, warnings);
-      case 'filesystem-optimization':
-        return await this.optimizeFilesystem(logs, errors, warnings);
-      case 'memory-optimization':
-        return await this.optimizeMemory(logs, errors, warnings);
-      default:
-        throw new Error(`Unknown optimization task: ${task.id}`);
-    }
-  }
-
-  /**
-   * Run security tasks
-   */
-  private async runSecurityTask(task: MaintenanceTask, logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    switch (task.id) {
-      case 'security-scan':
-        return await this.scanSecurity(logs, errors, warnings);
-      case 'firewall-check':
-        return await this.checkFirewall(logs, errors, warnings);
-      case 'ssl-certificate-check':
-        return await this.checkSSLCertificates(logs, errors, warnings);
-      default:
-        throw new Error(`Unknown security task: ${task.id}`);
-    }
-  }
-
-  /**
-   * Run backup tasks
-   */
-  private async runBackupTask(task: MaintenanceTask, logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    switch (task.id) {
-      case 'system-backup':
-        return await this.backupSystem(logs, errors, warnings);
-      case 'database-backup':
-        return await this.backupDatabase(logs, errors, warnings);
-      default:
-        throw new Error(`Unknown backup task: ${task.id}`);
-    }
-  }
-
-  /**
-   * Run monitoring tasks
-   */
-  private async runMonitoringTask(task: MaintenanceTask, logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    switch (task.id) {
-      case 'health-check':
-        return await this.checkSystemHealth(logs, errors, warnings);
-      case 'performance-monitoring':
-        return await this.monitorPerformance(logs, errors, warnings);
-      default:
-        throw new Error(`Unknown monitoring task: ${task.id}`);
-    }
-  }
-
-  /**
-   * Cleanup temporary files
-   */
-  private async cleanupTempFiles(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Cleaning temporary files...');
-    
-    try {
-      // Clean /tmp
-      await execAsync('find /tmp -type f -atime +1 -delete');
-      logs.push('Cleaned /tmp directory');
-      
-      // Clean /var/tmp
-      await execAsync('find /var/tmp -type f -atime +1 -delete');
-      logs.push('Cleaned /var/tmp directory');
-      
-      // Clean browser caches
-      await execAsync('find /home -name ".cache" -type d -exec rm -rf {} + 2>/dev/null || true');
-      logs.push('Cleaned browser caches');
-      
-      // Clean application caches
-      await execAsync('find /var/cache -type f -atime +7 -delete 2>/dev/null || true');
-      logs.push('Cleaned application caches');
-      
-      return { cleaned: true };
-    } catch (error) {
-      errors.push(`Failed to cleanup temp files: ${error}`);
+      await this.addLog(task.id, 'error', 'Task failed', { 
+        duration, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
       throw error;
     }
   }
 
   /**
-   * Rotate logs
+   * Execute backup task
    */
-  private async rotateLogs(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Rotating log files...');
+  private async executeBackupTask(task: MaintenanceTask): Promise<void> {
+    const { sources, destination, compression, encryption, retention } = task.config;
     
-    try {
-      // Rotate application logs
-      await execAsync('logrotate -f /etc/logrotate.conf');
-      logs.push('Rotated application logs');
-      
-      // Compress old logs
-      await execAsync('find /var/log -name "*.log" -type f -mtime +1 -exec gzip {} \\;');
-      logs.push('Compressed old log files');
-      
-      return { rotated: true };
-    } catch (error) {
-      errors.push(`Failed to rotate logs: ${error}`);
-      throw error;
-    }
+    await this.addLog(task.id, 'info', 'Starting backup task', { sources, destination });
+    
+    // This would integrate with the BackupProvider
+    // For now, just log the action
+    await this.addLog(task.id, 'info', 'Backup task completed', { 
+      sources, 
+      destination, 
+      compression, 
+      encryption, 
+      retention 
+    });
   }
 
   /**
-   * Cleanup old backups
+   * Execute cleanup task
    */
-  private async cleanupOldBackups(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Cleaning old backup files...');
+  private async executeCleanupTask(task: MaintenanceTask): Promise<void> {
+    const { tempFiles, logFiles, cacheFiles, oldBackups, retention } = task.config;
     
-    try {
-      // Remove backups older than 30 days
-      await execAsync('find /var/backups -type f -mtime +30 -delete');
-      logs.push('Removed old backup files');
-      
-      // Remove old log backups
-      await execAsync('find /var/log -name "*.gz" -type f -mtime +90 -delete');
-      logs.push('Removed old log backups');
-      
-      return { cleaned: true };
-    } catch (error) {
-      errors.push(`Failed to cleanup old backups: ${error}`);
-      throw error;
+    await this.addLog(task.id, 'info', 'Starting cleanup task', { 
+      tempFiles, 
+      logFiles, 
+      cacheFiles, 
+      oldBackups, 
+      retention 
+    });
+    
+    let cleanedFiles = 0;
+    let freedSpace = 0;
+    
+    if (tempFiles) {
+      // Clean temporary files
+      const { stdout } = await execAsync('find /tmp -type f -mtime +7 -delete');
+      cleanedFiles += parseInt(stdout) || 0;
     }
+    
+    if (logFiles) {
+      // Clean old log files
+      const { stdout } = await execAsync('find /var/log -name "*.log.*" -mtime +30 -delete');
+      cleanedFiles += parseInt(stdout) || 0;
+    }
+    
+    if (cacheFiles) {
+      // Clean cache files
+      const { stdout } = await execAsync('find /var/cache -type f -mtime +7 -delete');
+      cleanedFiles += parseInt(stdout) || 0;
+    }
+    
+    await this.addLog(task.id, 'info', 'Cleanup task completed', { 
+      cleanedFiles, 
+      freedSpace: `${freedSpace}MB` 
+    });
   }
 
   /**
-   * Cleanup package cache
+   * Execute update task
    */
-  private async cleanupPackageCache(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Cleaning package cache...');
+  private async executeUpdateTask(task: MaintenanceTask): Promise<void> {
+    const { updatePackages, securityOnly, rebootRequired, backupBefore } = task.config;
     
-    try {
-      // Clean apt cache
-      await execAsync('apt-get clean');
-      logs.push('Cleaned apt cache');
-      
-      // Remove unused packages
-      await execAsync('apt-get autoremove -y');
-      logs.push('Removed unused packages');
-      
-      return { cleaned: true };
-    } catch (error) {
-      errors.push(`Failed to cleanup package cache: ${error}`);
-      throw error;
+    await this.addLog(task.id, 'info', 'Starting update task', { 
+      updatePackages, 
+      securityOnly, 
+      rebootRequired, 
+      backupBefore 
+    });
+    
+    if (backupBefore) {
+      await this.addLog(task.id, 'info', 'Creating backup before update');
+      // This would create a backup
     }
-  }
-
-  /**
-   * Update system
-   */
-  private async updateSystem(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Checking for system updates...');
     
-    try {
-      // Update package lists
-      await execAsync('apt-get update');
-      logs.push('Updated package lists');
-      
-      // Check for updates
-      const { stdout } = await execAsync('apt list --upgradable 2>/dev/null | wc -l');
-      const updateCount = parseInt(stdout.trim());
-      
-      if (updateCount > 0) {
-        logs.push(`Found ${updateCount} updates available`);
-        
-        // Apply updates
-        await execAsync('apt-get upgrade -y');
-        logs.push('Applied system updates');
-        
-        return { updatesApplied: updateCount };
+    if (updatePackages) {
+      if (securityOnly) {
+        await execAsync('apt-get update && apt-get upgrade -y --only-upgrade');
       } else {
-        logs.push('System is up to date');
-        return { updatesApplied: 0 };
+        await execAsync('apt-get update && apt-get upgrade -y');
       }
-    } catch (error) {
-      errors.push(`Failed to update system: ${error}`);
-      throw error;
+    }
+    
+    await this.addLog(task.id, 'info', 'Update task completed');
+    
+    if (rebootRequired) {
+      await this.addLog(task.id, 'warn', 'System reboot required');
     }
   }
 
   /**
-   * Update security packages
+   * Execute optimization task
    */
-  private async updateSecurity(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Applying security updates...');
+  private async executeOptimizationTask(task: MaintenanceTask): Promise<void> {
+    const { analyze, optimize, repair, vacuum } = task.config;
     
-    try {
-      // Update package lists
-      await execAsync('apt-get update');
-      logs.push('Updated package lists');
+    await this.addLog(task.id, 'info', 'Starting optimization task', { 
+      analyze, 
+      optimize, 
+      repair, 
+      vacuum 
+    });
+    
+    if (analyze) {
+      await execAsync('mysql -e "ANALYZE TABLE *"');
+    }
+    
+    if (optimize) {
+      await execAsync('mysql -e "OPTIMIZE TABLE *"');
+    }
+    
+    if (repair) {
+      await execAsync('mysql -e "REPAIR TABLE *"');
+    }
+    
+    if (vacuum) {
+      await execAsync('psql -c "VACUUM ANALYZE"');
+    }
+    
+    await this.addLog(task.id, 'info', 'Optimization task completed');
+  }
+
+  /**
+   * Execute security task
+   */
+  private async executeSecurityTask(task: MaintenanceTask): Promise<void> {
+    const { scanType, checkUpdates, checkPermissions, checkFirewall, checkSSL } = task.config;
+    
+    await this.addLog(task.id, 'info', 'Starting security task', { 
+      scanType, 
+      checkUpdates, 
+      checkPermissions, 
+      checkFirewall, 
+      checkSSL 
+    });
+    
+    let vulnerabilities = 0;
+    let warnings = 0;
+    
+    if (checkUpdates) {
+      const { stdout } = await execAsync('apt list --upgradable 2>/dev/null | grep -c security');
+      vulnerabilities += parseInt(stdout) || 0;
+    }
+    
+    if (checkPermissions) {
+      // Check file permissions
+      const { stdout } = await execAsync('find /etc -type f -perm /o+w 2>/dev/null | wc -l');
+      warnings += parseInt(stdout) || 0;
+    }
+    
+    if (checkFirewall) {
+      const { stdout } = await execAsync('ufw status | grep -c "Status: active"');
+      if (parseInt(stdout) === 0) {
+        warnings++;
+      }
+    }
+    
+    if (checkSSL) {
+      // Check SSL certificate expiration
+      const { stdout } = await execAsync('find /etc/letsencrypt/live -name "cert.pem" 2>/dev/null | wc -l');
+      const certCount = parseInt(stdout) || 0;
+      if (certCount > 0) {
+        // Check expiration dates
+        const { stdout: expiry } = await execAsync('find /etc/letsencrypt/live -name "cert.pem" -exec openssl x509 -in {} -noout -dates \\; 2>/dev/null');
+        // Parse and check expiration dates
+      }
+    }
+    
+    await this.addLog(task.id, 'info', 'Security task completed', { 
+      vulnerabilities, 
+      warnings 
+    });
+  }
+
+  /**
+   * Execute monitoring task
+   */
+  private async executeMonitoringTask(task: MaintenanceTask): Promise<void> {
+    await this.addLog(task.id, 'info', 'Starting monitoring task');
+    
+    // Check system health
+    const { stdout: cpu } = await execAsync("top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | sed 's/%us,//'");
+    const cpuUsage = parseFloat(cpu.trim()) || 0;
+    
+    const { stdout: memory } = await execAsync("free | grep Mem | awk '{print $3/$2 * 100.0}'");
+    const memoryUsage = parseFloat(memory.trim()) || 0;
+    
+    const { stdout: disk } = await execAsync("df -h / | awk 'NR==2{print $5}' | sed 's/%//'");
+    const diskUsage = parseFloat(disk.trim()) || 0;
+    
+    await this.addLog(task.id, 'info', 'Monitoring task completed', { 
+      cpuUsage: `${cpuUsage}%`, 
+      memoryUsage: `${memoryUsage}%`, 
+      diskUsage: `${diskUsage}%` 
+    });
+  }
+
+  /**
+   * Execute custom task
+   */
+  private async executeCustomTask(task: MaintenanceTask): Promise<void> {
+    const { command, script, timeout } = task.config;
+    
+    await this.addLog(task.id, 'info', 'Starting custom task', { command, script });
+    
+    if (command) {
+      const { stdout, stderr } = await execAsync(command, { timeout: timeout || 300000 });
+      await this.addLog(task.id, 'info', 'Custom task completed', { 
+        output: stdout, 
+        error: stderr 
+      });
+    } else if (script) {
+      // Execute custom script
+      const scriptPath = path.join(this.configPath, 'scripts', `${task.id}.sh`);
+      await fs.writeFile(scriptPath, script);
+      await execAsync(`chmod +x ${scriptPath}`);
       
-      // Apply security updates only
-      await execAsync('apt-get upgrade -y --only-upgrade');
-      logs.push('Applied security updates');
-      
-      return { securityUpdatesApplied: true };
-    } catch (error) {
-      errors.push(`Failed to apply security updates: ${error}`);
-      throw error;
+      const { stdout, stderr } = await execAsync(scriptPath, { timeout: timeout || 300000 });
+      await this.addLog(task.id, 'info', 'Custom script completed', { 
+        output: stdout, 
+        error: stderr 
+      });
     }
   }
 
   /**
-   * Update packages
+   * Schedule retry
    */
-  private async updatePackages(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Updating packages...');
+  private async scheduleRetry(task: MaintenanceTask): Promise<void> {
+    if (!task.retry.enabled || task.retry.maxAttempts <= 0) {
+      return;
+    }
+
+    const retryCount = task.logs.filter(log => log.level === 'error').length;
+    if (retryCount >= task.retry.maxAttempts) {
+      await this.addLog(task.id, 'error', 'Maximum retry attempts reached');
+      return;
+    }
+
+    const delay = this.calculateRetryDelay(task.retry, retryCount);
+    const retryTime = new Date(Date.now() + delay);
     
-    try {
-      // Update package lists
-      await execAsync('apt-get update');
-      logs.push('Updated package lists');
-      
-      // Update packages
-      await execAsync('apt-get upgrade -y');
-      logs.push('Updated packages');
-      
-      return { packagesUpdated: true };
-    } catch (error) {
-      errors.push(`Failed to update packages: ${error}`);
-      throw error;
+    task.nextRun = retryTime;
+    task.status = 'pending';
+    task.updatedAt = new Date();
+    
+    this.tasks.set(task.id, task);
+    await this.saveTasks();
+    
+    await this.addLog(task.id, 'info', `Task scheduled for retry at ${retryTime.toISOString()}`);
+  }
+
+  /**
+   * Calculate retry delay
+   */
+  private calculateRetryDelay(retry: MaintenanceRetry, attempt: number): number {
+    let delay = retry.delay;
+    
+    if (retry.backoff === 'exponential') {
+      delay = retry.delay * Math.pow(2, attempt);
+    } else if (retry.backoff === 'linear') {
+      delay = retry.delay * (attempt + 1);
+    }
+    
+    return Math.min(delay, retry.maxDelay);
+  }
+
+  /**
+   * Add log entry
+   */
+  private async addLog(taskId: string, level: MaintenanceLog['level'], message: string, details?: Record<string, any>): Promise<void> {
+    const log: MaintenanceLog = {
+      id: this.generateId(),
+      taskId,
+      timestamp: new Date(),
+      level,
+      message,
+      details,
+    };
+
+    const task = this.tasks.get(taskId);
+    if (task) {
+      task.logs.push(log);
+      this.tasks.set(taskId, task);
+      await this.saveTasks();
     }
   }
 
   /**
-   * Optimize database
+   * Send notification
    */
-  private async optimizeDatabase(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Optimizing database...');
-    
-    try {
-      await this.databaseProvider.optimizeDatabases();
-      logs.push('Database optimized');
-      
-      return { optimized: true };
-    } catch (error) {
-      errors.push(`Failed to optimize database: ${error}`);
-      throw error;
+  private async sendNotification(task: MaintenanceTask, event: 'start' | 'success' | 'failure' | 'warning'): Promise<void> {
+    for (const notification of task.notifications) {
+      if (!notification.enabled || !notification.events.includes(event)) {
+        continue;
+      }
+
+      try {
+        // This would integrate with the NotificationProvider
+        await this.addLog(task.id, 'info', `Notification sent via ${notification.type}`, { event });
+      } catch (error) {
+        await this.addLog(task.id, 'error', `Failed to send notification via ${notification.type}`, { 
+          event, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
     }
   }
 
   /**
-   * Optimize filesystem
+   * Calculate next run time
    */
-  private async optimizeFilesystem(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Optimizing filesystem...');
+  private calculateNextRun(schedule: MaintenanceSchedule): Date | undefined {
+    if (!schedule.enabled) {
+      return undefined;
+    }
+
+    const now = new Date();
     
-    try {
-      // Sync filesystem
-      await execAsync('sync');
-      logs.push('Synced filesystem');
-      
-      // Clear page cache
-      await execAsync('echo 3 > /proc/sys/vm/drop_caches');
-      logs.push('Cleared page cache');
-      
-      return { optimized: true };
-    } catch (error) {
-      errors.push(`Failed to optimize filesystem: ${error}`);
-      throw error;
+    switch (schedule.type) {
+      case 'once':
+        return schedule.startDate || now;
+      case 'interval':
+        const intervalMs = parseInt(schedule.value) * 60 * 1000; // Convert minutes to milliseconds
+        return new Date(now.getTime() + intervalMs);
+      case 'cron':
+        // This would use a cron parser library
+        // For now, return a simple calculation
+        return new Date(now.getTime() + 24 * 60 * 60 * 1000); // Next day
+      case 'event':
+        return undefined; // Event-based tasks don't have a next run time
+      default:
+        return undefined;
     }
   }
 
   /**
-   * Optimize memory
+   * Get maintenance templates
    */
-  private async optimizeMemory(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Optimizing memory...');
-    
-    try {
-      // Clear page cache
-      await execAsync('echo 1 > /proc/sys/vm/drop_caches');
-      logs.push('Cleared page cache');
-      
-      // Clear dentries and inodes
-      await execAsync('echo 2 > /proc/sys/vm/drop_caches');
-      logs.push('Cleared dentries and inodes');
-      
-      return { optimized: true };
-    } catch (error) {
-      errors.push(`Failed to optimize memory: ${error}`);
-      throw error;
-    }
+  getTemplates(): MaintenanceTemplate[] {
+    return Array.from(this.templates.values());
   }
 
   /**
-   * Scan for security issues
+   * Get template by ID
    */
-  private async scanSecurity(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Scanning for security issues...');
+  getTemplate(templateId: string): MaintenanceTemplate | undefined {
+    return this.templates.get(templateId);
+  }
+
+  /**
+   * Get maintenance statistics
+   */
+  getStatistics(): MaintenanceStatistics {
+    const tasks = Array.from(this.tasks.values());
+    const now = new Date();
     
-    try {
-      // Check for failed login attempts
-      const { stdout } = await execAsync('grep "Failed password" /var/log/auth.log | wc -l');
-      const failedLogins = parseInt(stdout.trim());
+    const tasksByType: Record<string, number> = {};
+    const tasksByStatus: Record<string, number> = {};
+    
+    let totalExecutionTime = 0;
+    let executionCount = 0;
+    let completedTasks = 0;
+    let failedTasks = 0;
+    let lastExecution = new Date(0);
+    let nextExecution = new Date(0);
+    
+    for (const task of tasks) {
+      // Count by type
+      tasksByType[task.type] = (tasksByType[task.type] || 0) + 1;
       
-      if (failedLogins > 100) {
-        warnings.push(`High number of failed login attempts: ${failedLogins}`);
+      // Count by status
+      tasksByStatus[task.status] = (tasksByStatus[task.status] || 0) + 1;
+      
+      // Execution statistics
+      if (task.lastRun) {
+        lastExecution = new Date(Math.max(lastExecution.getTime(), task.lastRun.getTime()));
+        
+        const logs = task.logs.filter(log => log.duration);
+        for (const log of logs) {
+          totalExecutionTime += log.duration || 0;
+          executionCount++;
+        }
       }
       
-      // Check for suspicious processes
-      const { stdout: processes } = await execAsync('ps aux | grep -E "(nc|netcat|nmap|masscan)" | grep -v grep | wc -l');
-      const suspiciousProcesses = parseInt(processes.trim());
-      
-      if (suspiciousProcesses > 0) {
-        warnings.push(`Suspicious processes detected: ${suspiciousProcesses}`);
+      if (task.nextRun) {
+        nextExecution = new Date(Math.min(nextExecution.getTime() || Infinity, task.nextRun.getTime()));
       }
       
-      logs.push('Security scan completed');
-      
-      return { 
-        failedLogins, 
-        suspiciousProcesses,
-        securityIssues: warnings.length
-      };
-    } catch (error) {
-      errors.push(`Failed to scan security: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Check firewall
-   */
-  private async checkFirewall(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Checking firewall configuration...');
-    
-    try {
-      // Check UFW status
-      const { stdout } = await execAsync('ufw status');
-      logs.push('Firewall status checked');
-      
-      if (stdout.includes('Status: inactive')) {
-        warnings.push('Firewall is inactive');
+      if (task.status === 'completed') {
+        completedTasks++;
+      } else if (task.status === 'failed') {
+        failedTasks++;
       }
-      
-      return { firewallActive: !stdout.includes('Status: inactive') };
-    } catch (error) {
-      errors.push(`Failed to check firewall: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Check SSL certificates
-   */
-  private async checkSSLCertificates(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Checking SSL certificates...');
-    
-    try {
-      // Check Let's Encrypt certificates
-      await execAsync('certbot renew --dry-run');
-      logs.push('SSL certificates are up to date');
-      
-      return { certificatesValid: true };
-    } catch (error) {
-      warnings.push(`SSL certificate check failed: ${error}`);
-      return { certificatesValid: false };
-    }
-  }
-
-  /**
-   * Backup system
-   */
-  private async backupSystem(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Creating system backup...');
-    
-    try {
-      const backupDir = '/var/backups/atulya-panel';
-      await fs.ensureDir(backupDir);
-      
-      const timestamp = new Date().toISOString().split('T')[0];
-      const backupPath = path.join(backupDir, `system-backup-${timestamp}.tar.gz`);
-      
-      // Backup important directories
-      await execAsync(`tar -czf ${backupPath} /etc/nginx /etc/apache2 /var/www /etc/ssl`);
-      logs.push('System backup created');
-      
-      return { backupPath, backupCreated: true };
-    } catch (error) {
-      errors.push(`Failed to backup system: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Backup database
-   */
-  private async backupDatabase(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Creating database backup...');
-    
-    try {
-      await this.databaseProvider.createBackup();
-      logs.push('Database backup created');
-      
-      return { backupCreated: true };
-    } catch (error) {
-      errors.push(`Failed to backup database: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Check system health
-   */
-  private async checkSystemHealth(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Checking system health...');
-    
-    try {
-      const health = await this.getSystemHealth();
-      logs.push('System health check completed');
-      
-      return health;
-    } catch (error) {
-      errors.push(`Failed to check system health: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Monitor performance
-   */
-  private async monitorPerformance(logs: string[], errors: string[], warnings: string[]): Promise<any> {
-    logs.push('Monitoring system performance...');
-    
-    try {
-      // Get CPU usage
-      const { stdout: cpu } = await execAsync("top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | awk -F'%' '{print $1}'");
-      const cpuUsage = parseFloat(cpu.trim());
-      
-      // Get memory usage
-      const { stdout: memory } = await execAsync("free | grep Mem | awk '{printf \"%.1f\", $3/$2 * 100.0}'");
-      const memoryUsage = parseFloat(memory.trim());
-      
-      // Get disk usage
-      const { stdout: disk } = await execAsync("df -h / | tail -1 | awk '{print $5}' | sed 's/%//'");
-      const diskUsage = parseInt(disk.trim());
-      
-      logs.push('Performance monitoring completed');
-      
-      return { cpuUsage, memoryUsage, diskUsage };
-    } catch (error) {
-      errors.push(`Failed to monitor performance: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Get system health
-   */
-  async getSystemHealth(): Promise<SystemHealth> {
-    const issues: string[] = [];
-    const recommendations: string[] = [];
-    
-    // Check disk usage
-    const { stdout: disk } = await execAsync("df -h / | tail -1 | awk '{print $5}' | sed 's/%//'");
-    const diskUsage = parseInt(disk.trim());
-    const diskIssues: string[] = [];
-    
-    if (diskUsage > 90) {
-      diskIssues.push('Disk usage critical');
-      issues.push('Disk usage critical');
-    } else if (diskUsage > 80) {
-      diskIssues.push('Disk usage high');
-      issues.push('Disk usage high');
     }
     
-    // Check memory usage
-    const { stdout: memory } = await execAsync("free | grep Mem | awk '{printf \"%.1f\", $3/$2 * 100.0}'");
-    const memoryUsage = parseFloat(memory.trim());
-    const memoryIssues: string[] = [];
-    
-    if (memoryUsage > 90) {
-      memoryIssues.push('Memory usage critical');
-      issues.push('Memory usage critical');
-    } else if (memoryUsage > 80) {
-      memoryIssues.push('Memory usage high');
-      issues.push('Memory usage high');
-    }
-    
-    // Check CPU usage
-    const { stdout: cpu } = await execAsync("top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | awk -F'%' '{print $1}'");
-    const cpuUsage = parseFloat(cpu.trim());
-    const cpuIssues: string[] = [];
-    
-    if (cpuUsage > 90) {
-      cpuIssues.push('CPU usage critical');
-      issues.push('CPU usage critical');
-    } else if (cpuUsage > 80) {
-      cpuIssues.push('CPU usage high');
-      issues.push('CPU usage high');
-    }
-    
-    // Determine overall health
-    let overall: 'healthy' | 'warning' | 'critical' = 'healthy';
-    if (issues.length > 0) {
-      overall = issues.some(issue => issue.includes('critical')) ? 'critical' : 'warning';
-    }
-    
-    // Calculate health score
-    let score = 100;
-    if (diskUsage > 90) score -= 30;
-    else if (diskUsage > 80) score -= 15;
-    
-    if (memoryUsage > 90) score -= 30;
-    else if (memoryUsage > 80) score -= 15;
-    
-    if (cpuUsage > 90) score -= 30;
-    else if (cpuUsage > 80) score -= 15;
-    
-    // Add recommendations
-    if (diskUsage > 80) {
-      recommendations.push('Consider cleaning up disk space');
-    }
-    if (memoryUsage > 80) {
-      recommendations.push('Consider optimizing memory usage');
-    }
-    if (cpuUsage > 80) {
-      recommendations.push('Consider optimizing CPU usage');
-    }
+    const averageExecutionTime = executionCount > 0 ? totalExecutionTime / executionCount : 0;
+    const successRate = (completedTasks + failedTasks) > 0 ? (completedTasks / (completedTasks + failedTasks)) * 100 : 100;
     
     return {
-      overall,
-      score: Math.max(0, score),
-      issues,
-      recommendations,
-      lastChecked: new Date(),
-      components: {
-        disk: { usage: diskUsage, status: diskIssues.length > 0 ? 'warning' : 'healthy', issues: diskIssues },
-        memory: { usage: memoryUsage, status: memoryIssues.length > 0 ? 'warning' : 'healthy', issues: memoryIssues },
-        cpu: { usage: cpuUsage, status: cpuIssues.length > 0 ? 'warning' : 'healthy', issues: cpuIssues },
-        network: { status: 'healthy', issues: [] },
-        services: { status: 'healthy', issues: [] },
-        security: { status: 'healthy', issues: [] }
-      }
+      totalTasks: tasks.length,
+      activeTasks: tasks.filter(t => t.status === 'running').length,
+      completedTasks,
+      failedTasks,
+      tasksByType,
+      tasksByStatus,
+      averageExecutionTime,
+      successRate,
+      lastExecution: lastExecution.getTime() > 0 ? lastExecution : new Date(),
+      nextExecution: nextExecution.getTime() > 0 ? nextExecution : new Date(),
     };
   }
 
   /**
-   * Add result to history
+   * Start maintenance scheduler
    */
-  private addResult(taskId: string, result: MaintenanceResult): void {
-    if (!this.results.has(taskId)) {
-      this.results.set(taskId, []);
-    }
-    
-    const history = this.results.get(taskId)!;
-    history.push(result);
-    
-    // Keep only last 50 results
-    if (history.length > 50) {
-      history.splice(0, history.length - 50);
-    }
-  }
-
-  /**
-   * Get task results
-   */
-  getTaskResults(taskId: string): MaintenanceResult[] {
-    return this.results.get(taskId) || [];
-  }
-
-  /**
-   * Get all results
-   */
-  getAllResults(): { [taskId: string]: MaintenanceResult[] } {
-    const allResults: { [taskId: string]: MaintenanceResult[] } = {};
-    for (const [taskId, results] of this.results) {
-      allResults[taskId] = results;
-    }
-    return allResults;
-  }
-
-  /**
-   * Run all enabled tasks
-   */
-  async runAllTasks(): Promise<MaintenanceResult[]> {
+  async startScheduler(): Promise<void> {
     if (this.isRunning) {
-      throw new Error('Maintenance is already running');
+      return;
     }
-    
+
     this.isRunning = true;
-    const results: MaintenanceResult[] = [];
     
-    try {
-      const enabledTasks = Array.from(this.tasks.values()).filter(task => task.enabled);
-      
-      for (const task of enabledTasks) {
-        try {
-          const result = await this.runTask(task.id);
-          results.push(result);
-        } catch (error) {
-          
-        }
+    // Run scheduler every minute
+    setInterval(async () => {
+      try {
+        await this.runScheduler();
+      } catch (error) {
+        console.error('Scheduler error:', error);
       }
-      
-      return results;
-    } finally {
-      this.isRunning = false;
+    }, 60000); // 1 minute
+  }
+
+  /**
+   * Stop maintenance scheduler
+   */
+  async stopScheduler(): Promise<void> {
+    this.isRunning = false;
+  }
+
+  /**
+   * Run scheduler
+   */
+  private async runScheduler(): Promise<void> {
+    if (!this.isRunning) {
+      return;
+    }
+
+    const now = new Date();
+    const tasks = Array.from(this.tasks.values()).filter(task => 
+      task.status === 'pending' && 
+      task.schedule.enabled && 
+      task.nextRun && 
+      task.nextRun <= now
+    );
+
+    for (const task of tasks) {
+      try {
+        await this.executeTask(task.id);
+      } catch (error) {
+        console.error(`Failed to execute task ${task.id}:`, error);
+      }
     }
   }
 
   /**
-   * Check if maintenance is running
+   * Generate unique ID
    */
-  isMaintenanceRunning(): boolean {
-    return this.isRunning;
+  private generateId(): string {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 }

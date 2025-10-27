@@ -5,168 +5,299 @@ import path from 'path';
 
 const execAsync = promisify(exec);
 
-export interface ServiceConfig {
+export interface Service {
   name: string;
   displayName: string;
   description: string;
-  category: 'web' | 'database' | 'cache' | 'monitoring' | 'security' | 'development';
-  status: 'installed' | 'not_installed' | 'running' | 'stopped' | 'error';
+  category: 'web' | 'database' | 'cache' | 'monitoring' | 'security' | 'development' | 'ftp' | 'dns';
+  status: 'installed' | 'not_installed' | 'running' | 'stopped' | 'failed' | 'unknown';
   version?: string;
   port?: number;
-  dependencies?: string[];
   configPath?: string;
   logPath?: string;
-  restartCommand?: string;
-  stopCommand?: string;
-  startCommand?: string;
+  dependencies: string[];
+  requirements: ServiceRequirements;
+  features: string[];
+  documentation?: string;
 }
 
-export interface ServiceInstallationResult {
-  success: boolean;
-  message: string;
-  service: ServiceConfig;
+export interface ServiceRequirements {
+  memory: number; // MB
+  disk: number; // MB
+  cpu: number; // percentage
+  os: string[];
+  architecture: string[];
+}
+
+export interface ServiceInstallation {
+  service: Service;
+  status: 'pending' | 'installing' | 'installed' | 'failed';
+  progress: number;
   logs: string[];
+  startedAt: Date;
+  completedAt?: Date;
   error?: string;
 }
 
+export interface ServiceConfiguration {
+  service: string;
+  config: Record<string, any>;
+  lastModified: Date;
+  backupPath?: string;
+}
+
 export class ServiceManagerProvider {
-  private services: Map<string, ServiceConfig> = new Map();
-  private installationLogs: Map<string, string[]> = new Map();
+  private services: Map<string, Service>;
+  private installations: Map<string, ServiceInstallation>;
+  private configurations: Map<string, ServiceConfiguration>;
+  private configPath: string;
 
   constructor() {
-    this.initializeServices();
+    this.services = new Map();
+    this.installations = new Map();
+    this.configurations = new Map();
+    this.configPath = '/etc/atulya-panel/services';
+    
+    this.initialize();
   }
 
   /**
-   * Initialize known services configuration
+   * Initialize service manager
    */
-  private initializeServices(): void {
-    const knownServices: ServiceConfig[] = [
+  private async initialize(): Promise<void> {
+    try {
+      await fs.ensureDir(this.configPath);
+      await this.loadServices();
+      await this.loadConfigurations();
+    } catch (error) {
+      console.error('Failed to initialize service manager:', error);
+    }
+  }
+
+  /**
+   * Load service definitions
+   */
+  private async loadServices(): Promise<void> {
+    const serviceDefinitions: Service[] = [
       // Web Services
       {
         name: 'nginx',
         displayName: 'Nginx Web Server',
         description: 'High-performance web server and reverse proxy',
         category: 'web',
-        status: 'not_installed',
+        status: 'unknown',
         port: 80,
-        dependencies: [],
-        configPath: '/etc/nginx/nginx.conf',
+        configPath: '/etc/nginx',
         logPath: '/var/log/nginx',
-        restartCommand: 'systemctl restart nginx',
-        stopCommand: 'systemctl stop nginx',
-        startCommand: 'systemctl start nginx'
+        dependencies: [],
+        requirements: {
+          memory: 64,
+          disk: 100,
+          cpu: 10,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['reverse_proxy', 'load_balancing', 'ssl_termination', 'caching'],
+        documentation: 'https://nginx.org/en/docs/',
       },
       {
         name: 'apache2',
-        displayName: 'Apache Web Server',
+        displayName: 'Apache HTTP Server',
         description: 'Popular web server with extensive module support',
         category: 'web',
-        status: 'not_installed',
+        status: 'unknown',
         port: 80,
-        dependencies: [],
-        configPath: '/etc/apache2/apache2.conf',
+        configPath: '/etc/apache2',
         logPath: '/var/log/apache2',
-        restartCommand: 'systemctl restart apache2',
-        stopCommand: 'systemctl stop apache2',
-        startCommand: 'systemctl start apache2'
+        dependencies: [],
+        requirements: {
+          memory: 128,
+          disk: 200,
+          cpu: 15,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['mod_rewrite', 'mod_ssl', 'mod_php', 'virtual_hosts'],
+        documentation: 'https://httpd.apache.org/docs/',
       },
       {
-        name: 'php8.2-fpm',
-        displayName: 'PHP 8.2 FPM',
-        description: 'PHP FastCGI Process Manager for PHP 8.2',
+        name: 'php7.4-fpm',
+        displayName: 'PHP 7.4 FPM',
+        description: 'PHP FastCGI Process Manager for version 7.4',
         category: 'web',
-        status: 'not_installed',
+        status: 'unknown',
+        configPath: '/etc/php/7.4',
+        logPath: '/var/log/php7.4-fpm.log',
         dependencies: ['nginx', 'apache2'],
-        configPath: '/etc/php/8.2/fpm/php-fpm.conf',
-        logPath: '/var/log/php8.2-fpm.log',
-        restartCommand: 'systemctl restart php8.2-fpm',
-        stopCommand: 'systemctl stop php8.2-fpm',
-        startCommand: 'systemctl start php8.2-fpm'
-      },
-      {
-        name: 'php8.1-fpm',
-        displayName: 'PHP 8.1 FPM',
-        description: 'PHP FastCGI Process Manager for PHP 8.1',
-        category: 'web',
-        status: 'not_installed',
-        dependencies: ['nginx', 'apache2'],
-        configPath: '/etc/php/8.1/fpm/php-fpm.conf',
-        logPath: '/var/log/php8.1-fpm.log',
-        restartCommand: 'systemctl restart php8.1-fpm',
-        stopCommand: 'systemctl stop php8.1-fpm',
-        startCommand: 'systemctl start php8.1-fpm'
+        requirements: {
+          memory: 256,
+          disk: 500,
+          cpu: 20,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['opcache', 'extensions', 'sessions', 'file_upload'],
+        documentation: 'https://www.php.net/manual/en/install.fpm.php',
       },
       {
         name: 'php8.0-fpm',
         displayName: 'PHP 8.0 FPM',
-        description: 'PHP FastCGI Process Manager for PHP 8.0',
+        description: 'PHP FastCGI Process Manager for version 8.0',
         category: 'web',
-        status: 'not_installed',
-        dependencies: ['nginx', 'apache2'],
-        configPath: '/etc/php/8.0/fpm/php-fpm.conf',
+        status: 'unknown',
+        configPath: '/etc/php/8.0',
         logPath: '/var/log/php8.0-fpm.log',
-        restartCommand: 'systemctl restart php8.0-fpm',
-        stopCommand: 'systemctl stop php8.0-fpm',
-        startCommand: 'systemctl start php8.0-fpm'
+        dependencies: ['nginx', 'apache2'],
+        requirements: {
+          memory: 256,
+          disk: 500,
+          cpu: 20,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['opcache', 'extensions', 'sessions', 'file_upload', 'jit'],
+        documentation: 'https://www.php.net/manual/en/install.fpm.php',
+      },
+      {
+        name: 'php8.1-fpm',
+        displayName: 'PHP 8.1 FPM',
+        description: 'PHP FastCGI Process Manager for version 8.1',
+        category: 'web',
+        status: 'unknown',
+        configPath: '/etc/php/8.1',
+        logPath: '/var/log/php8.1-fpm.log',
+        dependencies: ['nginx', 'apache2'],
+        requirements: {
+          memory: 256,
+          disk: 500,
+          cpu: 20,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['opcache', 'extensions', 'sessions', 'file_upload', 'jit', 'enums'],
+        documentation: 'https://www.php.net/manual/en/install.fpm.php',
+      },
+      {
+        name: 'php8.2-fpm',
+        displayName: 'PHP 8.2 FPM',
+        description: 'PHP FastCGI Process Manager for version 8.2',
+        category: 'web',
+        status: 'unknown',
+        configPath: '/etc/php/8.2',
+        logPath: '/var/log/php8.2-fpm.log',
+        dependencies: ['nginx', 'apache2'],
+        requirements: {
+          memory: 256,
+          disk: 500,
+          cpu: 20,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['opcache', 'extensions', 'sessions', 'file_upload', 'jit', 'enums', 'readonly_classes'],
+        documentation: 'https://www.php.net/manual/en/install.fpm.php',
+      },
+      {
+        name: 'php8.3-fpm',
+        displayName: 'PHP 8.3 FPM',
+        description: 'PHP FastCGI Process Manager for version 8.3',
+        category: 'web',
+        status: 'unknown',
+        configPath: '/etc/php/8.3',
+        logPath: '/var/log/php8.3-fpm.log',
+        dependencies: ['nginx', 'apache2'],
+        requirements: {
+          memory: 256,
+          disk: 500,
+          cpu: 20,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['opcache', 'extensions', 'sessions', 'file_upload', 'jit', 'enums', 'readonly_classes', 'typed_properties'],
+        documentation: 'https://www.php.net/manual/en/install.fpm.php',
       },
 
       // Database Services
       {
         name: 'mysql',
         displayName: 'MySQL Database',
-        description: 'Popular open-source relational database',
+        description: 'Popular open-source relational database management system',
         category: 'database',
-        status: 'not_installed',
+        status: 'unknown',
         port: 3306,
-        dependencies: [],
-        configPath: '/etc/mysql/mysql.conf.d/mysqld.cnf',
+        configPath: '/etc/mysql',
         logPath: '/var/log/mysql',
-        restartCommand: 'systemctl restart mysql',
-        stopCommand: 'systemctl stop mysql',
-        startCommand: 'systemctl start mysql'
+        dependencies: [],
+        requirements: {
+          memory: 512,
+          disk: 1000,
+          cpu: 30,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['replication', 'clustering', 'partitioning', 'triggers', 'stored_procedures'],
+        documentation: 'https://dev.mysql.com/doc/',
       },
       {
         name: 'postgresql',
         displayName: 'PostgreSQL Database',
-        description: 'Advanced open-source relational database',
+        description: 'Advanced open-source relational database system',
         category: 'database',
-        status: 'not_installed',
+        status: 'unknown',
         port: 5432,
-        dependencies: [],
-        configPath: '/etc/postgresql/*/main/postgresql.conf',
+        configPath: '/etc/postgresql',
         logPath: '/var/log/postgresql',
-        restartCommand: 'systemctl restart postgresql',
-        stopCommand: 'systemctl stop postgresql',
-        startCommand: 'systemctl start postgresql'
+        dependencies: [],
+        requirements: {
+          memory: 512,
+          disk: 1000,
+          cpu: 30,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['json_support', 'full_text_search', 'extensions', 'replication', 'partitioning'],
+        documentation: 'https://www.postgresql.org/docs/',
       },
+
+      // Cache Services
       {
         name: 'redis',
         displayName: 'Redis Cache',
-        description: 'In-memory data structure store',
+        description: 'In-memory data structure store and cache',
         category: 'cache',
-        status: 'not_installed',
+        status: 'unknown',
         port: 6379,
-        dependencies: [],
-        configPath: '/etc/redis/redis.conf',
+        configPath: '/etc/redis',
         logPath: '/var/log/redis',
-        restartCommand: 'systemctl restart redis',
-        stopCommand: 'systemctl stop redis',
-        startCommand: 'systemctl start redis'
+        dependencies: [],
+        requirements: {
+          memory: 128,
+          disk: 100,
+          cpu: 10,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['caching', 'pub_sub', 'lua_scripting', 'clustering', 'persistence'],
+        documentation: 'https://redis.io/documentation',
       },
       {
         name: 'memcached',
         displayName: 'Memcached',
         description: 'Distributed memory caching system',
         category: 'cache',
-        status: 'not_installed',
+        status: 'unknown',
         port: 11211,
-        dependencies: [],
         configPath: '/etc/memcached.conf',
         logPath: '/var/log/memcached.log',
-        restartCommand: 'systemctl restart memcached',
-        stopCommand: 'systemctl stop memcached',
-        startCommand: 'systemctl start memcached'
+        dependencies: [],
+        requirements: {
+          memory: 128,
+          disk: 50,
+          cpu: 5,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['caching', 'clustering', 'compression'],
+        documentation: 'https://memcached.org/',
       },
 
       // Monitoring Services
@@ -175,70 +306,100 @@ export class ServiceManagerProvider {
         displayName: 'Prometheus',
         description: 'Monitoring system and time series database',
         category: 'monitoring',
-        status: 'not_installed',
+        status: 'unknown',
         port: 9090,
-        dependencies: [],
-        configPath: '/etc/prometheus/prometheus.yml',
+        configPath: '/etc/prometheus',
         logPath: '/var/log/prometheus',
-        restartCommand: 'systemctl restart prometheus',
-        stopCommand: 'systemctl stop prometheus',
-        startCommand: 'systemctl start prometheus'
+        dependencies: [],
+        requirements: {
+          memory: 256,
+          disk: 500,
+          cpu: 15,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['metrics_collection', 'alerting', 'querying', 'service_discovery'],
+        documentation: 'https://prometheus.io/docs/',
       },
       {
         name: 'grafana',
         displayName: 'Grafana',
-        description: 'Analytics and monitoring platform',
+        description: 'Analytics and monitoring dashboard',
         category: 'monitoring',
-        status: 'not_installed',
+        status: 'unknown',
         port: 3000,
-        dependencies: ['prometheus'],
-        configPath: '/etc/grafana/grafana.ini',
+        configPath: '/etc/grafana',
         logPath: '/var/log/grafana',
-        restartCommand: 'systemctl restart grafana-server',
-        stopCommand: 'systemctl stop grafana-server',
-        startCommand: 'systemctl start grafana-server'
+        dependencies: ['prometheus'],
+        requirements: {
+          memory: 256,
+          disk: 200,
+          cpu: 10,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['dashboards', 'alerting', 'plugins', 'user_management'],
+        documentation: 'https://grafana.com/docs/',
       },
       {
-        name: 'node-exporter',
+        name: 'node_exporter',
         displayName: 'Node Exporter',
-        description: 'Prometheus exporter for hardware metrics',
+        description: 'Prometheus exporter for hardware and OS metrics',
         category: 'monitoring',
-        status: 'not_installed',
+        status: 'unknown',
         port: 9100,
-        dependencies: ['prometheus'],
-        configPath: '/etc/node_exporter/config.yml',
+        configPath: '/etc/node_exporter',
         logPath: '/var/log/node_exporter',
-        restartCommand: 'systemctl restart node_exporter',
-        stopCommand: 'systemctl stop node_exporter',
-        startCommand: 'systemctl start node_exporter'
+        dependencies: ['prometheus'],
+        requirements: {
+          memory: 64,
+          disk: 50,
+          cpu: 5,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['system_metrics', 'hardware_metrics', 'network_metrics'],
+        documentation: 'https://github.com/prometheus/node_exporter',
       },
 
       // Security Services
       {
         name: 'fail2ban',
         displayName: 'Fail2Ban',
-        description: 'Intrusion prevention software',
+        description: 'Intrusion prevention system',
         category: 'security',
-        status: 'not_installed',
-        dependencies: [],
-        configPath: '/etc/fail2ban/jail.local',
+        status: 'unknown',
+        configPath: '/etc/fail2ban',
         logPath: '/var/log/fail2ban.log',
-        restartCommand: 'systemctl restart fail2ban',
-        stopCommand: 'systemctl stop fail2ban',
-        startCommand: 'systemctl start fail2ban'
+        dependencies: [],
+        requirements: {
+          memory: 64,
+          disk: 50,
+          cpu: 5,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['ip_banning', 'log_monitoring', 'jail_management'],
+        documentation: 'https://www.fail2ban.org/wiki/index.php/Main_Page',
       },
       {
         name: 'ufw',
         displayName: 'UFW Firewall',
         description: 'Uncomplicated Firewall for Ubuntu',
         category: 'security',
-        status: 'not_installed',
-        dependencies: [],
-        configPath: '/etc/ufw/ufw.conf',
+        status: 'unknown',
+        configPath: '/etc/ufw',
         logPath: '/var/log/ufw.log',
-        restartCommand: 'ufw reload',
-        stopCommand: 'ufw disable',
-        startCommand: 'ufw enable'
+        dependencies: [],
+        requirements: {
+          memory: 32,
+          disk: 10,
+          cpu: 1,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['port_management', 'rule_management', 'logging'],
+        documentation: 'https://help.ubuntu.com/community/UFW',
       },
 
       // Development Services
@@ -247,632 +408,611 @@ export class ServiceManagerProvider {
         displayName: 'Git',
         description: 'Distributed version control system',
         category: 'development',
-        status: 'not_installed',
-        dependencies: [],
-        configPath: '/etc/gitconfig',
+        status: 'unknown',
+        configPath: '/etc/git',
         logPath: '/var/log/git',
-        restartCommand: 'systemctl restart git',
-        stopCommand: 'systemctl stop git',
-        startCommand: 'systemctl start git'
+        dependencies: [],
+        requirements: {
+          memory: 32,
+          disk: 100,
+          cpu: 5,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['version_control', 'branching', 'merging', 'collaboration'],
+        documentation: 'https://git-scm.com/doc',
       },
       {
         name: 'docker',
         displayName: 'Docker',
         description: 'Containerization platform',
         category: 'development',
-        status: 'not_installed',
-        port: 2375,
-        dependencies: [],
-        configPath: '/etc/docker/daemon.json',
+        status: 'unknown',
+        port: 2376,
+        configPath: '/etc/docker',
         logPath: '/var/log/docker',
-        restartCommand: 'systemctl restart docker',
-        stopCommand: 'systemctl stop docker',
-        startCommand: 'systemctl start docker'
-      }
+        dependencies: [],
+        requirements: {
+          memory: 1024,
+          disk: 2000,
+          cpu: 50,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['containerization', 'orchestration', 'networking', 'storage'],
+        documentation: 'https://docs.docker.com/',
+      },
+
+      // FTP Services
+      {
+        name: 'vsftpd',
+        displayName: 'vsftpd FTP Server',
+        description: 'Secure FTP server implementation',
+        category: 'ftp',
+        status: 'unknown',
+        port: 21,
+        configPath: '/etc/vsftpd.conf',
+        logPath: '/var/log/vsftpd.log',
+        dependencies: [],
+        requirements: {
+          memory: 64,
+          disk: 100,
+          cpu: 10,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['ftp_server', 'user_management', 'ssl_support', 'logging'],
+        documentation: 'https://security.appspot.com/vsftpd.html',
+      },
+
+      // DNS Services
+      {
+        name: 'bind9',
+        displayName: 'BIND DNS Server',
+        description: 'Berkeley Internet Name Domain server',
+        category: 'dns',
+        status: 'unknown',
+        port: 53,
+        configPath: '/etc/bind',
+        logPath: '/var/log/bind',
+        dependencies: [],
+        requirements: {
+          memory: 128,
+          disk: 200,
+          cpu: 15,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['dns_server', 'zone_management', 'recursion', 'caching'],
+        documentation: 'https://www.isc.org/bind/',
+      },
+      {
+        name: 'powerdns',
+        displayName: 'PowerDNS',
+        description: 'High-performance DNS server',
+        category: 'dns',
+        status: 'unknown',
+        port: 53,
+        configPath: '/etc/powerdns',
+        logPath: '/var/log/powerdns',
+        dependencies: [],
+        requirements: {
+          memory: 256,
+          disk: 500,
+          cpu: 20,
+          os: ['ubuntu', 'debian'],
+          architecture: ['x86_64', 'arm64'],
+        },
+        features: ['dns_server', 'api', 'backend_support', 'caching'],
+        documentation: 'https://doc.powerdns.com/',
+      },
     ];
 
-    for (const service of knownServices) {
+    for (const service of serviceDefinitions) {
       this.services.set(service.name, service);
     }
+
+    // Update service statuses
+    await this.updateServiceStatuses();
   }
 
   /**
-   * Get all available services
+   * Load service configurations
    */
-  async getAvailableServices(): Promise<ServiceConfig[]> {
-    const services = Array.from(this.services.values());
-    
-    // Check actual status of each service
-    for (const service of services) {
-      service.status = await this.getServiceStatus(service.name);
-      service.version = await this.getServiceVersion(service.name);
-    }
-    
-    return services;
-  }
-
-  /**
-   * Get service by name
-   */
-  getService(name: string): ServiceConfig | undefined {
-    return this.services.get(name);
-  }
-
-  /**
-   * Install a service
-   */
-  async installService(serviceName: string): Promise<ServiceInstallationResult> {
-    const service = this.services.get(serviceName);
-    if (!service) {
-      return {
-        success: false,
-        message: `Service ${serviceName} not found`,
-        service: service as any,
-        logs: [],
-        error: 'Service not found'
-      };
-    }
-
-    const logs: string[] = [];
-    logs.push(`Starting installation of ${service.displayName}...`);
-
+  private async loadConfigurations(): Promise<void> {
     try {
-      // Check if already installed
-      const currentStatus = await this.getServiceStatus(serviceName);
-      if (currentStatus === 'installed' || currentStatus === 'running') {
-        return {
-          success: true,
-          message: `${service.displayName} is already installed`,
-          service: { ...service, status: currentStatus },
-          logs: [...logs, 'Service already installed']
-        };
-      }
-
-      // Install dependencies first
-      if (service.dependencies && service.dependencies.length > 0) {
-        logs.push(`Installing dependencies: ${service.dependencies.join(', ')}`);
-        for (const dep of service.dependencies) {
-          const depResult = await this.installService(dep);
-          if (!depResult.success) {
-            throw new Error(`Failed to install dependency ${dep}: ${depResult.error}`);
-          }
-          logs.push(`Dependency ${dep} installed successfully`);
+      const configFile = path.join(this.configPath, 'configurations.json');
+      if (await fs.pathExists(configFile)) {
+        const data = await fs.readFile(configFile, 'utf8');
+        const configurations = JSON.parse(data);
+        
+        this.configurations.clear();
+        for (const config of configurations) {
+          this.configurations.set(config.service, config);
         }
       }
-
-      // Install the service based on its type
-      await this.performServiceInstallation(service, logs);
-
-      // Enable and start the service
-      await this.enableService(serviceName);
-      await this.startService(serviceName);
-
-      // Update service status
-      service.status = await this.getServiceStatus(serviceName);
-      service.version = await this.getServiceVersion(serviceName);
-
-      logs.push(`${service.displayName} installed and started successfully`);
-
-      return {
-        success: true,
-        message: `${service.displayName} installed successfully`,
-        service,
-        logs
-      };
-
     } catch (error) {
-      logs.push(`Installation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return {
-        success: false,
-        message: `Failed to install ${service.displayName}`,
-        service,
-        logs,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      console.error('Failed to load service configurations:', error);
     }
   }
 
   /**
-   * Perform the actual service installation
+   * Save service configurations
    */
-  private async performServiceInstallation(service: ServiceConfig, logs: string[]): Promise<void> {
-    const installCommands = this.getInstallCommands(service);
-    
-    for (const command of installCommands) {
-      logs.push(`Executing: ${command}`);
+  private async saveConfigurations(): Promise<void> {
+    try {
+      const configFile = path.join(this.configPath, 'configurations.json');
+      const data = Array.from(this.configurations.values());
+      await fs.writeFile(configFile, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('Failed to save service configurations:', error);
+    }
+  }
+
+  /**
+   * Update service statuses
+   */
+  async updateServiceStatuses(): Promise<void> {
+    for (const [name, service] of this.services) {
       try {
-        const { stdout, stderr } = await execAsync(command);
-        if (stdout) logs.push(`Output: ${stdout}`);
-        if (stderr) logs.push(`Warning: ${stderr}`);
+        const status = await this.getServiceStatus(name);
+        service.status = status;
       } catch (error) {
-        logs.push(`Error executing command: ${error}`);
-        throw error;
+        service.status = 'unknown';
       }
-    }
-  }
-
-  /**
-   * Get installation commands for a service
-   */
-  private getInstallCommands(service: ServiceConfig): string[] {
-    const commands: string[] = [];
-
-    switch (service.name) {
-      case 'nginx':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y nginx');
-        break;
-
-      case 'apache2':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y apache2');
-        break;
-
-      case 'php8.2-fpm':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y software-properties-common');
-        commands.push('add-apt-repository -y ppa:ondrej/php');
-        commands.push('apt-get update');
-        commands.push('apt-get install -y php8.2-fpm php8.2-cli php8.2-common php8.2-mysql php8.2-zip php8.2-gd php8.2-mbstring php8.2-curl php8.2-xml php8.2-bcmath');
-        break;
-
-      case 'php8.1-fpm':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y software-properties-common');
-        commands.push('add-apt-repository -y ppa:ondrej/php');
-        commands.push('apt-get update');
-        commands.push('apt-get install -y php8.1-fpm php8.1-cli php8.1-common php8.1-mysql php8.1-zip php8.1-gd php8.1-mbstring php8.1-curl php8.1-xml php8.1-bcmath');
-        break;
-
-      case 'php8.0-fpm':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y software-properties-common');
-        commands.push('add-apt-repository -y ppa:ondrej/php');
-        commands.push('apt-get update');
-        commands.push('apt-get install -y php8.0-fpm php8.0-cli php8.0-common php8.0-mysql php8.0-zip php8.0-gd php8.0-mbstring php8.0-curl php8.0-xml php8.0-bcmath');
-        break;
-
-      case 'mysql':
-        commands.push('apt-get update');
-        commands.push('DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server');
-        commands.push('mysql_secure_installation -y');
-        break;
-
-      case 'postgresql':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y postgresql postgresql-contrib');
-        break;
-
-      case 'redis':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y redis-server');
-        break;
-
-      case 'memcached':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y memcached');
-        break;
-
-      case 'prometheus':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y prometheus');
-        break;
-
-      case 'grafana':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y apt-transport-https software-properties-common wget');
-        commands.push('wget -q -O - https://packages.grafana.com/gpg.key | apt-key add -');
-        commands.push('echo "deb https://packages.grafana.com/oss/deb stable main" | tee -a /etc/apt/sources.list.d/grafana.list');
-        commands.push('apt-get update');
-        commands.push('apt-get install -y grafana');
-        break;
-
-      case 'node-exporter':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y prometheus-node-exporter');
-        break;
-
-      case 'fail2ban':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y fail2ban');
-        break;
-
-      case 'ufw':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y ufw');
-        break;
-
-      case 'git':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y git');
-        break;
-
-      case 'docker':
-        commands.push('apt-get update');
-        commands.push('apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release');
-        commands.push('curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg');
-        commands.push('echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null');
-        commands.push('apt-get update');
-        commands.push('apt-get install -y docker-ce docker-ce-cli containerd.io');
-        commands.push('usermod -aG docker $USER');
-        break;
-
-      default:
-        throw new Error(`Installation not implemented for service: ${service.name}`);
-    }
-
-    return commands;
-  }
-
-  /**
-   * Uninstall a service
-   */
-  async uninstallService(serviceName: string): Promise<ServiceInstallationResult> {
-    const service = this.services.get(serviceName);
-    if (!service) {
-      return {
-        success: false,
-        message: `Service ${serviceName} not found`,
-        service: service as any,
-        logs: [],
-        error: 'Service not found'
-      };
-    }
-
-    const logs: string[] = [];
-    logs.push(`Starting uninstallation of ${service.displayName}...`);
-
-    try {
-      // Stop the service first
-      await this.stopService(serviceName);
-      logs.push('Service stopped');
-
-      // Uninstall the service
-      const uninstallCommands = this.getUninstallCommands(service);
-      
-      for (const command of uninstallCommands) {
-        logs.push(`Executing: ${command}`);
-        try {
-          const { stdout, stderr } = await execAsync(command);
-          if (stdout) logs.push(`Output: ${stdout}`);
-          if (stderr) logs.push(`Warning: ${stderr}`);
-        } catch (error) {
-          logs.push(`Error executing command: ${error}`);
-          // Continue with uninstallation even if some commands fail
-        }
-      }
-
-      // Update service status
-      service.status = 'not_installed';
-      service.version = undefined;
-
-      logs.push(`${service.displayName} uninstalled successfully`);
-
-      return {
-        success: true,
-        message: `${service.displayName} uninstalled successfully`,
-        service,
-        logs
-      };
-
-    } catch (error) {
-      logs.push(`Uninstallation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return {
-        success: false,
-        message: `Failed to uninstall ${service.displayName}`,
-        service,
-        logs,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
-
-  /**
-   * Get uninstallation commands for a service
-   */
-  private getUninstallCommands(service: ServiceConfig): string[] {
-    const commands: string[] = [];
-
-    switch (service.name) {
-      case 'nginx':
-        commands.push('systemctl stop nginx');
-        commands.push('systemctl disable nginx');
-        commands.push('apt-get remove -y nginx nginx-common');
-        commands.push('apt-get purge -y nginx nginx-common');
-        break;
-
-      case 'apache2':
-        commands.push('systemctl stop apache2');
-        commands.push('systemctl disable apache2');
-        commands.push('apt-get remove -y apache2 apache2-utils');
-        commands.push('apt-get purge -y apache2 apache2-utils');
-        break;
-
-      case 'php8.2-fpm':
-        commands.push('systemctl stop php8.2-fpm');
-        commands.push('systemctl disable php8.2-fpm');
-        commands.push('apt-get remove -y php8.2-fpm php8.2-cli php8.2-common php8.2-mysql php8.2-zip php8.2-gd php8.2-mbstring php8.2-curl php8.2-xml php8.2-bcmath');
-        commands.push('apt-get purge -y php8.2-fpm php8.2-cli php8.2-common php8.2-mysql php8.2-zip php8.2-gd php8.2-mbstring php8.2-curl php8.2-xml php8.2-bcmath');
-        break;
-
-      case 'mysql':
-        commands.push('systemctl stop mysql');
-        commands.push('systemctl disable mysql');
-        commands.push('apt-get remove -y mysql-server mysql-client mysql-common');
-        commands.push('apt-get purge -y mysql-server mysql-client mysql-common');
-        commands.push('rm -rf /var/lib/mysql');
-        commands.push('rm -rf /var/log/mysql');
-        commands.push('rm -rf /etc/mysql');
-        break;
-
-      case 'postgresql':
-        commands.push('systemctl stop postgresql');
-        commands.push('systemctl disable postgresql');
-        commands.push('apt-get remove -y postgresql postgresql-contrib');
-        commands.push('apt-get purge -y postgresql postgresql-contrib');
-        break;
-
-      case 'redis':
-        commands.push('systemctl stop redis');
-        commands.push('systemctl disable redis');
-        commands.push('apt-get remove -y redis-server');
-        commands.push('apt-get purge -y redis-server');
-        break;
-
-      case 'memcached':
-        commands.push('systemctl stop memcached');
-        commands.push('systemctl disable memcached');
-        commands.push('apt-get remove -y memcached');
-        commands.push('apt-get purge -y memcached');
-        break;
-
-      case 'docker':
-        commands.push('systemctl stop docker');
-        commands.push('systemctl disable docker');
-        commands.push('apt-get remove -y docker-ce docker-ce-cli containerd.io');
-        commands.push('apt-get purge -y docker-ce docker-ce-cli containerd.io');
-        commands.push('rm -rf /var/lib/docker');
-        commands.push('rm -rf /etc/docker');
-        break;
-
-      default:
-        commands.push(`apt-get remove -y ${service.name}`);
-        commands.push(`apt-get purge -y ${service.name}`);
-    }
-
-    return commands;
-  }
-
-  /**
-   * Start a service
-   */
-  async startService(serviceName: string): Promise<boolean> {
-    try {
-      const service = this.services.get(serviceName);
-      if (!service) return false;
-
-      if (service.startCommand) {
-        await execAsync(service.startCommand);
-      } else {
-        await execAsync(`systemctl start ${serviceName}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error(`Failed to start service ${serviceName}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Stop a service
-   */
-  async stopService(serviceName: string): Promise<boolean> {
-    try {
-      const service = this.services.get(serviceName);
-      if (!service) return false;
-
-      if (service.stopCommand) {
-        await execAsync(service.stopCommand);
-      } else {
-        await execAsync(`systemctl stop ${serviceName}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error(`Failed to stop service ${serviceName}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Restart a service
-   */
-  async restartService(serviceName: string): Promise<boolean> {
-    try {
-      const service = this.services.get(serviceName);
-      if (!service) return false;
-
-      if (service.restartCommand) {
-        await execAsync(service.restartCommand);
-      } else {
-        await execAsync(`systemctl restart ${serviceName}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error(`Failed to restart service ${serviceName}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Enable a service
-   */
-  async enableService(serviceName: string): Promise<boolean> {
-    try {
-      await execAsync(`systemctl enable ${serviceName}`);
-      return true;
-    } catch (error) {
-      console.error(`Failed to enable service ${serviceName}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Disable a service
-   */
-  async disableService(serviceName: string): Promise<boolean> {
-    try {
-      await execAsync(`systemctl disable ${serviceName}`);
-      return true;
-    } catch (error) {
-      console.error(`Failed to disable service ${serviceName}:`, error);
-      return false;
     }
   }
 
   /**
    * Get service status
    */
-  async getServiceStatus(serviceName: string): Promise<'installed' | 'not_installed' | 'running' | 'stopped' | 'error'> {
+  private async getServiceStatus(serviceName: string): Promise<Service['status']> {
     try {
       // Check if service is installed
-      const { stdout: isInstalled } = await execAsync(`systemctl list-unit-files | grep -q ${serviceName} && echo "installed" || echo "not_installed"`);
-      
-      if (isInstalled.trim() === 'not_installed') {
+      const { stdout } = await execAsync(`which ${serviceName}`);
+      if (!stdout.trim()) {
         return 'not_installed';
       }
 
       // Check if service is running
-      const { stdout: isActive } = await execAsync(`systemctl is-active ${serviceName}`);
-      
-      if (isActive.trim() === 'active') {
+      const { stdout: status } = await execAsync(`systemctl is-active ${serviceName}`);
+      if (status.trim() === 'active') {
         return 'running';
-      } else if (isActive.trim() === 'inactive') {
+      } else if (status.trim() === 'inactive') {
         return 'stopped';
+      } else if (status.trim() === 'failed') {
+        return 'failed';
       } else {
-        return 'error';
+        return 'installed';
       }
     } catch (error) {
-      return 'not_installed';
+      return 'unknown';
     }
   }
 
   /**
-   * Get service version
+   * Install service
    */
-  async getServiceVersion(serviceName: string): Promise<string | undefined> {
+  async installService(serviceName: string): Promise<ServiceInstallation> {
     try {
-      const { stdout } = await execAsync(`${serviceName} --version 2>/dev/null || ${serviceName} -v 2>/dev/null || echo "unknown"`);
-      return stdout.trim();
+      const service = this.services.get(serviceName);
+      if (!service) {
+        throw new Error(`Service not found: ${serviceName}`);
+      }
+
+      const installation: ServiceInstallation = {
+        service,
+        status: 'pending',
+        progress: 0,
+        logs: [],
+        startedAt: new Date(),
+      };
+
+      this.installations.set(serviceName, installation);
+
+      // Start installation process
+      this.performServiceInstallation(serviceName);
+
+      return installation;
     } catch (error) {
-      return undefined;
+      console.error('Failed to install service:', error);
+      throw new Error(`Failed to install service: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Get service logs
+   * Perform service installation
    */
-  async getServiceLogs(serviceName: string, lines: number = 100): Promise<string[]> {
+  private async performServiceInstallation(serviceName: string): Promise<void> {
+    const installation = this.installations.get(serviceName);
+    if (!installation) return;
+
     try {
-      const { stdout } = await execAsync(`journalctl -u ${serviceName} -n ${lines} --no-pager`);
-      return stdout.split('\n').filter(line => line.trim());
+      installation.status = 'installing';
+      installation.progress = 10;
+      installation.logs.push('Starting installation...');
+
+      // Get installation commands
+      const commands = this.getInstallCommands(serviceName);
+      
+      for (let i = 0; i < commands.length; i++) {
+        const command = commands[i];
+        installation.logs.push(`Executing: ${command}`);
+        
+        try {
+          await execAsync(command);
+          installation.progress = 10 + ((i + 1) / commands.length) * 80;
+        } catch (error) {
+          installation.logs.push(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          throw error;
+        }
+      }
+
+      // Start service
+      installation.logs.push('Starting service...');
+      await execAsync(`systemctl enable ${serviceName}`);
+      await execAsync(`systemctl start ${serviceName}`);
+      
+      installation.progress = 100;
+      installation.status = 'installed';
+      installation.completedAt = new Date();
+      installation.logs.push('Installation completed successfully');
+
+      // Update service status
+      const service = this.services.get(serviceName);
+      if (service) {
+        service.status = 'running';
+      }
+
     } catch (error) {
-      return [`Failed to get logs for ${serviceName}: ${error}`];
+      installation.status = 'failed';
+      installation.error = error instanceof Error ? error.message : 'Unknown error';
+      installation.completedAt = new Date();
+      installation.logs.push(`Installation failed: ${installation.error}`);
+    }
+  }
+
+  /**
+   * Get installation commands for service
+   */
+  private getInstallCommands(serviceName: string): string[] {
+    const commands: Record<string, string[]> = {
+      'nginx': [
+        'apt-get update',
+        'apt-get install -y nginx',
+        'systemctl enable nginx',
+        'systemctl start nginx',
+      ],
+      'apache2': [
+        'apt-get update',
+        'apt-get install -y apache2',
+        'systemctl enable apache2',
+        'systemctl start apache2',
+      ],
+      'php7.4-fpm': [
+        'apt-get update',
+        'apt-get install -y php7.4-fpm php7.4-cli php7.4-common php7.4-mysql php7.4-zip php7.4-gd php7.4-mbstring php7.4-curl php7.4-xml php7.4-bcmath php7.4-json',
+        'systemctl enable php7.4-fpm',
+        'systemctl start php7.4-fpm',
+      ],
+      'php8.0-fpm': [
+        'apt-get update',
+        'apt-get install -y php8.0-fpm php8.0-cli php8.0-common php8.0-mysql php8.0-zip php8.0-gd php8.0-mbstring php8.0-curl php8.0-xml php8.0-bcmath php8.0-json',
+        'systemctl enable php8.0-fpm',
+        'systemctl start php8.0-fpm',
+      ],
+      'php8.1-fpm': [
+        'apt-get update',
+        'apt-get install -y php8.1-fpm php8.1-cli php8.1-common php8.1-mysql php8.1-zip php8.1-gd php8.1-mbstring php8.1-curl php8.1-xml php8.1-bcmath php8.1-json',
+        'systemctl enable php8.1-fpm',
+        'systemctl start php8.1-fpm',
+      ],
+      'php8.2-fpm': [
+        'apt-get update',
+        'apt-get install -y php8.2-fpm php8.2-cli php8.2-common php8.2-mysql php8.2-zip php8.2-gd php8.2-mbstring php8.2-curl php8.2-xml php8.2-bcmath php8.2-json',
+        'systemctl enable php8.2-fpm',
+        'systemctl start php8.2-fpm',
+      ],
+      'php8.3-fpm': [
+        'apt-get update',
+        'apt-get install -y php8.3-fpm php8.3-cli php8.3-common php8.3-mysql php8.3-zip php8.3-gd php8.3-mbstring php8.3-curl php8.3-xml php8.3-bcmath php8.3-json',
+        'systemctl enable php8.3-fpm',
+        'systemctl start php8.3-fpm',
+      ],
+      'mysql': [
+        'apt-get update',
+        'apt-get install -y mysql-server',
+        'systemctl enable mysql',
+        'systemctl start mysql',
+      ],
+      'postgresql': [
+        'apt-get update',
+        'apt-get install -y postgresql postgresql-contrib',
+        'systemctl enable postgresql',
+        'systemctl start postgresql',
+      ],
+      'redis': [
+        'apt-get update',
+        'apt-get install -y redis-server',
+        'systemctl enable redis-server',
+        'systemctl start redis-server',
+      ],
+      'memcached': [
+        'apt-get update',
+        'apt-get install -y memcached',
+        'systemctl enable memcached',
+        'systemctl start memcached',
+      ],
+      'prometheus': [
+        'apt-get update',
+        'apt-get install -y prometheus',
+        'systemctl enable prometheus',
+        'systemctl start prometheus',
+      ],
+      'grafana': [
+        'apt-get update',
+        'apt-get install -y grafana',
+        'systemctl enable grafana-server',
+        'systemctl start grafana-server',
+      ],
+      'node_exporter': [
+        'apt-get update',
+        'apt-get install -y prometheus-node-exporter',
+        'systemctl enable prometheus-node-exporter',
+        'systemctl start prometheus-node-exporter',
+      ],
+      'fail2ban': [
+        'apt-get update',
+        'apt-get install -y fail2ban',
+        'systemctl enable fail2ban',
+        'systemctl start fail2ban',
+      ],
+      'ufw': [
+        'apt-get update',
+        'apt-get install -y ufw',
+        'ufw --force enable',
+      ],
+      'git': [
+        'apt-get update',
+        'apt-get install -y git',
+      ],
+      'docker': [
+        'apt-get update',
+        'apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release',
+        'curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg',
+        'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null',
+        'apt-get update',
+        'apt-get install -y docker-ce docker-ce-cli containerd.io',
+        'systemctl enable docker',
+        'systemctl start docker',
+      ],
+      'vsftpd': [
+        'apt-get update',
+        'apt-get install -y vsftpd',
+        'systemctl enable vsftpd',
+        'systemctl start vsftpd',
+      ],
+      'bind9': [
+        'apt-get update',
+        'apt-get install -y bind9 bind9utils bind9-doc',
+        'systemctl enable bind9',
+        'systemctl start bind9',
+      ],
+      'powerdns': [
+        'apt-get update',
+        'apt-get install -y pdns-server pdns-backend-sqlite3',
+        'systemctl enable pdns',
+        'systemctl start pdns',
+      ],
+    };
+
+    return commands[serviceName] || [];
+  }
+
+  /**
+   * Uninstall service
+   */
+  async uninstallService(serviceName: string): Promise<void> {
+    try {
+      const service = this.services.get(serviceName);
+      if (!service) {
+        throw new Error(`Service not found: ${serviceName}`);
+      }
+
+      // Stop service
+      await execAsync(`systemctl stop ${serviceName}`);
+      await execAsync(`systemctl disable ${serviceName}`);
+
+      // Get uninstall commands
+      const commands = this.getUninstallCommands(serviceName);
+      
+      for (const command of commands) {
+        await execAsync(command);
+      }
+
+      // Update service status
+      service.status = 'not_installed';
+
+    } catch (error) {
+      console.error('Failed to uninstall service:', error);
+      throw new Error(`Failed to uninstall service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get uninstall commands for service
+   */
+  private getUninstallCommands(serviceName: string): string[] {
+    const commands: Record<string, string[]> = {
+      'nginx': ['apt-get remove -y nginx nginx-common'],
+      'apache2': ['apt-get remove -y apache2 apache2-utils'],
+      'php7.4-fpm': ['apt-get remove -y php7.4*'],
+      'php8.0-fpm': ['apt-get remove -y php8.0*'],
+      'php8.1-fpm': ['apt-get remove -y php8.1*'],
+      'php8.2-fpm': ['apt-get remove -y php8.2*'],
+      'php8.3-fpm': ['apt-get remove -y php8.3*'],
+      'mysql': ['apt-get remove -y mysql-server mysql-client'],
+      'postgresql': ['apt-get remove -y postgresql postgresql-contrib'],
+      'redis': ['apt-get remove -y redis-server'],
+      'memcached': ['apt-get remove -y memcached'],
+      'prometheus': ['apt-get remove -y prometheus'],
+      'grafana': ['apt-get remove -y grafana'],
+      'node_exporter': ['apt-get remove -y prometheus-node-exporter'],
+      'fail2ban': ['apt-get remove -y fail2ban'],
+      'ufw': ['apt-get remove -y ufw'],
+      'git': ['apt-get remove -y git'],
+      'docker': ['apt-get remove -y docker-ce docker-ce-cli containerd.io'],
+      'vsftpd': ['apt-get remove -y vsftpd'],
+      'bind9': ['apt-get remove -y bind9 bind9utils bind9-doc'],
+      'powerdns': ['apt-get remove -y pdns-server pdns-backend-sqlite3'],
+    };
+
+    return commands[serviceName] || [];
+  }
+
+  /**
+   * Start service
+   */
+  async startService(serviceName: string): Promise<void> {
+    try {
+      await execAsync(`systemctl start ${serviceName}`);
+      
+      const service = this.services.get(serviceName);
+      if (service) {
+        service.status = 'running';
+      }
+    } catch (error) {
+      console.error('Failed to start service:', error);
+      throw new Error(`Failed to start service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Stop service
+   */
+  async stopService(serviceName: string): Promise<void> {
+    try {
+      await execAsync(`systemctl stop ${serviceName}`);
+      
+      const service = this.services.get(serviceName);
+      if (service) {
+        service.status = 'stopped';
+      }
+    } catch (error) {
+      console.error('Failed to stop service:', error);
+      throw new Error(`Failed to stop service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Restart service
+   */
+  async restartService(serviceName: string): Promise<void> {
+    try {
+      await execAsync(`systemctl restart ${serviceName}`);
+      
+      const service = this.services.get(serviceName);
+      if (service) {
+        service.status = 'running';
+      }
+    } catch (error) {
+      console.error('Failed to restart service:', error);
+      throw new Error(`Failed to restart service: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
    * Get service configuration
    */
-  async getServiceConfig(serviceName: string): Promise<string | undefined> {
-    const service = this.services.get(serviceName);
-    if (!service || !service.configPath) return undefined;
-
-    try {
-      const { stdout } = await execAsync(`cat ${service.configPath}`);
-      return stdout;
-    } catch (error) {
-      return undefined;
-    }
+  getServiceConfiguration(serviceName: string): ServiceConfiguration | undefined {
+    return this.configurations.get(serviceName);
   }
 
   /**
    * Update service configuration
    */
-  async updateServiceConfig(serviceName: string, config: string): Promise<boolean> {
-    const service = this.services.get(serviceName);
-    if (!service || !service.configPath) return false;
-
+  async updateServiceConfiguration(serviceName: string, config: Record<string, any>): Promise<void> {
     try {
-      await fs.writeFile(service.configPath, config);
-      return true;
+      const service = this.services.get(serviceName);
+      if (!service) {
+        throw new Error(`Service not found: ${serviceName}`);
+      }
+
+      const configuration: ServiceConfiguration = {
+        service: serviceName,
+        config,
+        lastModified: new Date(),
+        backupPath: path.join(this.configPath, 'backups', `${serviceName}_${Date.now()}.json`),
+      };
+
+      // Create backup of current configuration
+      const currentConfig = this.configurations.get(serviceName);
+      if (currentConfig) {
+        await fs.ensureDir(path.dirname(configuration.backupPath!));
+        await fs.writeFile(configuration.backupPath!, JSON.stringify(currentConfig, null, 2));
+      }
+
+      this.configurations.set(serviceName, configuration);
+      await this.saveConfigurations();
     } catch (error) {
-      console.error(`Failed to update config for ${serviceName}:`, error);
-      return false;
+      console.error('Failed to update service configuration:', error);
+      throw new Error(`Failed to update service configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Get installation logs for a service
+   * Get all services
    */
-  getInstallationLogs(serviceName: string): string[] {
-    return this.installationLogs.get(serviceName) || [];
+  getServices(): Service[] {
+    return Array.from(this.services.values());
   }
 
   /**
-   * Get all services by category
+   * Get service by name
    */
-  getServicesByCategory(category: string): ServiceConfig[] {
+  getService(name: string): Service | undefined {
+    return this.services.get(name);
+  }
+
+  /**
+   * Get services by category
+   */
+  getServicesByCategory(category: Service['category']): Service[] {
     return Array.from(this.services.values()).filter(service => service.category === category);
   }
 
   /**
-   * Check if service is running
+   * Get installation status
    */
-  async isServiceRunning(serviceName: string): Promise<boolean> {
-    const status = await this.getServiceStatus(serviceName);
-    return status === 'running';
+  getInstallationStatus(serviceName: string): ServiceInstallation | undefined {
+    return this.installations.get(serviceName);
   }
 
   /**
-   * Get service health status
+   * Get service statistics
    */
-  async getServiceHealth(serviceName: string): Promise<{
-    status: string;
-    uptime?: string;
-    memory?: string;
-    cpu?: string;
-    port?: number;
-  }> {
-    const service = this.services.get(serviceName);
-    if (!service) {
-      return { status: 'not_found' };
+  getStatistics(): {
+    totalServices: number;
+    installedServices: number;
+    runningServices: number;
+    stoppedServices: number;
+    failedServices: number;
+    byCategory: Record<string, number>;
+  } {
+    const services = Array.from(this.services.values());
+    const byCategory: Record<string, number> = {};
+
+    for (const service of services) {
+      byCategory[service.category] = (byCategory[service.category] || 0) + 1;
     }
 
-    const status = await this.getServiceStatus(serviceName);
-    const health: any = { status };
-
-    if (status === 'running') {
-      try {
-        // Get uptime
-        const { stdout: uptime } = await execAsync(`systemctl show ${serviceName} --property=ActiveEnterTimestamp --value`);
-        health.uptime = uptime.trim();
-
-        // Get memory usage
-        const { stdout: memory } = await execAsync(`systemctl show ${serviceName} --property=MemoryCurrent --value`);
-        health.memory = memory.trim();
-
-        // Get port if available
-        if (service.port) {
-          health.port = service.port;
-        }
-      } catch (error) {
-        // Ignore errors for optional health metrics
-      }
-    }
-
-    return health;
+    return {
+      totalServices: services.length,
+      installedServices: services.filter(s => s.status === 'installed' || s.status === 'running' || s.status === 'stopped').length,
+      runningServices: services.filter(s => s.status === 'running').length,
+      stoppedServices: services.filter(s => s.status === 'stopped').length,
+      failedServices: services.filter(s => s.status === 'failed').length,
+      byCategory,
+    };
   }
 }
