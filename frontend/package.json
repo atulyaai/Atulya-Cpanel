@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "type-check": "vue-tsc --noEmit"
+    "type-check": "vue-tsc --noEmit",
+    "test": "vitest run --reporter=verbose",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@fastify/jwt": "10.0.0",
@@ -35,13 +38,16 @@
     "@typescript-eslint/parser": "^8.46.2",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.4.0",
+    "@vue/test-utils": "^2.4.3",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.55.0",
     "eslint-plugin-vue": "^9.19.2",
+    "jsdom": "^23.0.1",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "typescript": "~5.3.3",
     "vite": "^7.1.12",
+    "vitest": "^1.0.4",
     "vue-tsc": "^2.1.6"
   },
   "engines": {
