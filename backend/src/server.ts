@@ -23,6 +23,11 @@ import { userRoutes } from './routes/users.js';
 import { metricsRoutes } from './routes/metrics.js';
 import { monitoringRoutes } from './routes/monitoring.js';
 import { serviceRoutes } from './routes/services.js';
+import { diagnosticsRoutes } from './routes/diagnostics.js';
+import { appInstallerRoutes } from './routes/appInstaller.js';
+import { firewallRoutes } from './routes/firewall.js';
+import { gitDeployRoutes } from './routes/gitDeploy.js';
+import { runtimeRoutes } from './routes/runtime.js';
 import { setupWebSocket } from './utils/websocket.js';
 import { setupJobs } from './jobs/index.js';
 import path from 'path';
@@ -132,6 +137,11 @@ async function registerRoutes() {
   await fastify.register(metricsRoutes, { prefix: '/api/v1/metrics' });
   await fastify.register(monitoringRoutes, { prefix: '/api/v1/monitoring' });
   await fastify.register(serviceRoutes, { prefix: '/api/v1' });
+  await fastify.register(diagnosticsRoutes, { prefix: '/api/v1/diagnostics' });
+  await fastify.register(appInstallerRoutes, { prefix: '/api/v1/apps' });
+  await fastify.register(firewallRoutes, { prefix: '/api/v1/firewall' });
+  await fastify.register(gitDeployRoutes, { prefix: '/api/v1/git' });
+  await fastify.register(runtimeRoutes, { prefix: '/api/v1/runtime' });
 }
 
 /**

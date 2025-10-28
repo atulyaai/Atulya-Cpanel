@@ -1178,4 +1178,12 @@ export class UserManagementProvider {
   private generateId(): string {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
+
+  async setUserQuota(userId: string, quota: { diskMB: number; bandwidthGB: number }) {
+    // stub persistence; integrate with DB
+  }
+
+  async getUserQuota(userId: string) {
+    return { diskMB: 10240, bandwidthGB: 100 }; // default stub
+  }
 }

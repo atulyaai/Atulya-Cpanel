@@ -107,6 +107,55 @@ program
   });
 
 program
+  .command('doctor')
+  .description('Diagnose environment and service status')
+  .action(async () => {
+    try {
+      await run('curl', ['-s', 'http://localhost:3000/api/v1/diagnostics']);
+    } catch {
+      console.log(chalk.yellow('Backend not running. Starting server diagnostics limited to tools...'));
+      const tools = ['node', 'npm', 'psql', 'redis-server'];
+      for (const t of tools) {
+        const ok = !!which.sync(t, { nothrow: true });
+        console.log(`${ok ? chalk.green('✔') : chalk.red('✘')} ${t}`);
+      }
+    }
+  });
+
+program
+  .command('update')
+  .description('Pull latest, rebuild, and migrate')
+  .action(async () => {
+    await run('git', ['pull', '--rebase']);
+    await run('npm', ['install', '--no-audit', '--no-fund']);
+    await run('npm', ['run', 'build:backend']);
+    await run('npm', ['run', 'build:frontend']);
+    await run('npm', ['run', 'db:deploy'], { cwd: 'backend' });
+  });
+
+program
+  .command('install-deps')
+  .description('Install only system dependencies')
+  .action(async () => {
+    const os = detectOs();
+    if (os === 'windows') {
+      await installWindows();
+      return;
+    }
+    if (os === 'ubuntu' || os === 'debian') return installUbuntuDebian();
+    if (os === 'rhel') return installRhel();
+  });
+
+program
+  .command('setup-db')
+  .description('Run DB generate/migrate/seed for backend')
+  .action(async () => {
+    await run('npm', ['run', 'db:generate'], { cwd: 'backend' });
+    await run('npm', ['run', 'db:migrate'], { cwd: 'backend' });
+    await run('npm', ['run', 'db:seed'], { cwd: 'backend' });
+  });
+
+program
   .command('status')
   .description('Check services and environment')
   .action(async () => {
