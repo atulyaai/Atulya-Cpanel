@@ -130,11 +130,14 @@ A modern, open-source web hosting control panel built with TypeScript, Vue 3, an
 
 #### Development Setup
 ```bash
-# Clone and setup
+# Clone
 git clone https://github.com/atulyaai/Atulya-Cpanel.git
 cd Atulya-Cpanel
-chmod +x setup-dev.sh
-./setup-dev.sh
+
+# Use the CLI (recommended)
+npm install --no-audit --no-fund
+npm run link:cli
+cpanel install
 ```
 
 #### Production Installation

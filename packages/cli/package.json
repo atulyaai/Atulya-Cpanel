@@ -1,0 +1,28 @@
+{
+  "name": "@atulya-panel/cli",
+  "version": "0.1.0",
+  "description": "Atulya Panel CLI",
+  "bin": {
+    "cpanel": "dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "execa": "^8.0.1",
+    "ora": "^8.0.1",
+    "chalk": "^5.3.0",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^9.2.12",
+    "which": "^4.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.4"
+  }
+}
+

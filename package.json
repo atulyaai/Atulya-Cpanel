@@ -5,7 +5,8 @@
   "private": true,
   "workspaces": [
     "backend",
-    "frontend"
+    "frontend",
+    "packages/cli"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
@@ -52,7 +53,8 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "docker:clean": "docker-compose down -v --remove-orphans"
+    "docker:clean": "docker-compose down -v --remove-orphans",
+    "link:cli": "cd packages/cli && npm link"
   },
   "keywords": [
     "cpanel",
