@@ -6,7 +6,9 @@
   "workspaces": [
     "backend",
     "frontend",
-    "packages/cli"
+    "packages/cli",
+    "packages/core",
+    "packages/plugins/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",

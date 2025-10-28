@@ -6,6 +6,10 @@ import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
 import which from 'which';
+import { detectOs } from './installers/index.js';
+import { installUbuntuDebian } from './installers/ubuntu.js';
+import { installRhel } from './installers/rhel.js';
+import { installWindows } from './installers/windows.js';
 
 const program = new Command();
 
@@ -32,11 +36,26 @@ program
   .command('install')
   .description('Install dependencies and set up system')
   .option('--no-db', 'Skip database migrations and seed')
+  .option('--os <os>', 'Specify OS family (auto|ubuntu|debian|rhel|windows)', 'auto')
   .action(async (opts) => {
     const spinner = ora('Installing dependencies').start();
     try {
       await ensureTool('node', 'Please install Node.js 20+');
       await ensureTool('npm', 'npm should come with Node.js');
+      const os = opts.os === 'auto' ? detectOs() : opts.os;
+      if (os === 'windows') {
+        spinner.text = 'Running Windows installer';
+        await installWindows();
+        spinner.succeed('Windows installation complete');
+        return;
+      }
+      if (os === 'ubuntu' || os === 'debian') {
+        spinner.text = 'Running Ubuntu/Debian installer';
+        await installUbuntuDebian();
+      } else if (os === 'rhel') {
+        spinner.text = 'Running RHEL/Fedora installer';
+        await installRhel();
+      }
       spinner.text = 'Installing root dependencies';
       await run('npm', ['install', '--no-audit', '--no-fund']);
       spinner.text = 'Installing backend dependencies';
