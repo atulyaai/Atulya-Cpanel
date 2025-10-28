@@ -1,7 +1,7 @@
 import { execa } from 'execa';
 
 export async function installWindows() {
-  // Run PowerShell installer when available
-  await execa('powershell', ['-ExecutionPolicy', 'Bypass', '-File', 'install.ps1'], { stdio: 'inherit' });
+  // Run PowerShell installer in scripts/
+  await execa('powershell', ['-ExecutionPolicy', 'Bypass', '-File', 'scripts/install.ps1'], { stdio: 'inherit' });
 }
 

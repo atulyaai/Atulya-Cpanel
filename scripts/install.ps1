@@ -27,5 +27,20 @@ cmd /c cd frontend && npm install --no-audit --no-fund
 Write-Host "Generating Prisma client and running migrations..."
 cmd /c cd backend && npx prisma generate && npx prisma migrate deploy && npx prisma db seed
 
-Write-Host "Windows install complete. Use 'npm run dev' or 'cpanel start' to run."
+Write-Host "Registering Windows service..."
+$nodePath = (Get-Command node).Source
+$backendPath = Join-Path (Get-Location) "backend"
+$entry = Join-Path $backendPath "dist/server.js"
+if (!(Test-Path $entry)) { 
+  Write-Host "Building backend for service..." 
+  cmd /c cd backend && npm run build 
+}
+$bin = '"' + $nodePath + '" ' + '"' + $entry + '"'
+sc.exe stop AtulyaPanel 2>$null | Out-Null
+sc.exe delete AtulyaPanel 2>$null | Out-Null
+sc.exe create AtulyaPanel binPath= $bin start= auto DisplayName= "Atulya Panel" | Out-Null
+sc.exe description AtulyaPanel "Atulya Panel Backend Service" | Out-Null
+sc.exe start AtulyaPanel | Out-Null
+
+Write-Host "Windows install complete. Service 'AtulyaPanel' registered and started."
 
