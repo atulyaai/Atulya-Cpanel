@@ -143,7 +143,7 @@ chmod +x setup-dev.sh
 curl -fsSL https://raw.githubusercontent.com/atulyaai/Atulya-Cpanel/main/install.sh | sudo bash
 ```
 
-> 📚 **Detailed Installation Guide**: See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for complete setup instructions.
+> 📚 **Detailed Installation Guide**: See [INSTALLATION_GUIDE.md](docs/INSTALLATION_GUIDE.md) for complete setup instructions.
 
 ### 🌐 Access the Application
 
@@ -190,8 +190,9 @@ atulya-panel/
 ├── 📄 README.md                   # This file
 ├── 📄 LICENSE                     # MIT License
 ├── 📄 CHANGELOG.md                # Version history
-├── 📄 ROADMAP.md                  # Future development plans
-├── 📄 TESTING.md                  # Testing documentation
+├── 📁 docs/                       # Documentation
+│   ├── 📄 INSTALLATION_GUIDE.md   # Detailed installation guide
+│   └── 📄 MINIMAL_SETUP.md        # Minimal setup steps
 └── 📄 DEVELOPMENT_GUIDE.md       # Development guidelines
 ```
 
